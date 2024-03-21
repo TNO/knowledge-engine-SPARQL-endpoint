@@ -1,0 +1,9 @@
+python-dotenv
+fastapi
+uvicorn
+httpx
+requests
+strenum
+rdflib
+pytest
+setuptools
