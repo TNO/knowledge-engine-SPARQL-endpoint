@@ -103,11 +103,6 @@ async def post(query: Query) -> dict:
     
         return json_result
 
-        #result = graph.query("SELECT * WHERE {?s ?p ?o}")
-        #for row in result:
-        #    print(f"{row}")        
-        
-        #return {"Your request has been properly received with parameter": query.value}
     except ValueError:
         raise HTTPException(status_code=400,
                             detail=f"Bad request to SPARQL endpoint: is {dat_uri} "
