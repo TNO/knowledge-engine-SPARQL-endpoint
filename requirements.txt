@@ -7,3 +7,6 @@ strenum
 rdflib
 pytest
 setuptools
+sparql-parser
+SPARQLWrapper
+knowledge-mapper
