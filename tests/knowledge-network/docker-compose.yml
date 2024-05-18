@@ -14,7 +14,7 @@ services:
     environment: 
       KE_RUNTIME_PORT: 8081 # The port that the KE uses to listen for inter-KE-runtime communication.
       KE_RUNTIME_EXPOSED_URL: http://runtime-1:8081 # The URL where the runtime is available for inter-runtime communication from the outside.
-      KD_URL: http://knowledge-directory:8282
+      #KD_URL: http://knowledge-directory:8282
   runtime-2:
     image: ghcr.io/tno/knowledge-engine/smart-connector:1.2.4
     environment: 
@@ -50,28 +50,32 @@ services:
             "att": "<https://www.tno.nl/defense/data/c2/cyberattack-1>",
             "struc": "<https://www.tno.nl/defense/ontology/c2/energy-system-Lithuania>",
             "name": "\"Energy-system-Lithuania\"^^xsd:string"            
+          },
+          {
+            "att": "<https://www.tno.nl/defense/data/c2/cyberattack-2>",
+            "struc": "<https://www.tno.nl/defense/ontology/c2/energy-system-Latvia>",
+            "name": "\"Energy-system-Latvia\"^^xsd:string"
           }
         ]
   kb2:
     build: ./answering_kb
     environment:
-      KE_URL: http://runtime-2:8280/rest
+      KE_URL: http://runtime-1:8280/rest
       KB_ID: http://example.org/kb2
       PREFIXES: |
         {
-          "ex": "http://example.org/"
+          "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+          "c2": "https://www.tno.nl/defense/ontology/c2/"
         }
       GRAPH_PATTERN: |
-        ?a ex:relatedTo ?b .
+        ?att rdf:type c2:CyberAttack .
+        ?att c2:isTargetedTowards ?struc . 
+        ?struc rdf:type c2:Structure .
       KB_DATA: |
         [
           {
-            "a": "<http://example.org/Math>",
-            "b": "<http://example.org/Science>"
-          },
-          {
-            "a": "<http://example.org/Books>",
-            "b": "<http://example.org/Magazines>"
+            "att": "<https://www.tno.nl/defense/data/c2/cyberattack-3>",
+            "struc": "<https://www.tno.nl/defense/ontology/c2/gas-provider-Lithuania>"
           }
         ]
   kb3:
