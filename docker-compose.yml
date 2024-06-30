@@ -11,3 +11,12 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT}:8000"
+  sparql-endpoint-image-test:
+    image: ci.tno.nl:4567/tke/knowledge-engine-sparql-endpoint:latest
+    environment:
+      - KNOWLEDGE_ENGINE_URL=${KNOWLEDGE_ENGINE_URL}
+      - KNOWLEDGE_BASE_ID=${KNOWLEDGE_BASE_ID}
+      - KNOWLEDGE_BASE_NAME=${KNOWLEDGE_BASE_NAME}
+      - KNOWLEDGE_BASE_DESCRIPTION=${KNOWLEDGE_BASE_DESCRIPTION}
+    ports:
+      - "${PORT}:8000"

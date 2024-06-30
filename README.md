@@ -10,9 +10,9 @@ The Knowledge Engine SPARQL Endpoint is available as a Docker image in the Conta
 
 All tagged versions of the endpoint can be found there.
 
-The latest (and greatest) image of the endpoint is available under the following link:
+The current version of image of the endpoint is available under the following link:
 
-`ci.tno.nl:4567/tke/knowledge-engine-sparql-endpoint:latest`
+`ci.tno.nl:4567/tke/knowledge-engine-sparql-endpoint:1.0.0`
 
 The endpoint assumes that 5 environment variables are available.
 
