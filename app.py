@@ -3,6 +3,8 @@ import os
 import json
 import string
 import pprint
+import requests
+import logging
 
 # api imports
 from fastapi import FastAPI, HTTPException, Response, Body, Query
@@ -15,6 +17,8 @@ from rdflib.util import from_n3
 from rdflib import RDF, Graph, Namespace, URIRef, Literal
 from rdflib.plugins.sparql.parser import parseQuery
 from rdflib.plugins.sparql.algebra import translateQuery
+from rdflib.plugins.sparql.algebra import pprintAlgebra
+from rdflib.exceptions import ParserError
 
 # knowledge engine imports
 from knowledge_mapper.tke_client import TkeClient
@@ -23,14 +27,40 @@ from knowledge_mapper import knowledge_interaction
 from knowledge_mapper.knowledge_interaction import AskKnowledgeInteractionRegistrationRequest
 
 
+####################
+# ENABLING LOGGING #
+####################
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+####################
+# ENVIRONMENT VARS #
+####################
+
+
+if "KNOWLEDGE_ENGINE_URL" in os.environ:
+    KNOWLEDGE_ENGINE_URL = os.getenv("KNOWLEDGE_ENGINE_URL")
+    if KNOWLEDGE_ENGINE_URL == "":
+        raise Exception("Incorrect URL => You should provide a correct URL to the Knowledge Network in the environment variable KNOWLEDGE_ENGINE_URL")
+else:
+    raise Exception("Missing URL => You should provide a correct URL to the Knowledge Network in the environment variable KNOWLEDGE_ENGINE_URL")
+if "KNOWLEDGE_BASE_ID" in os.environ:
+    KNOWLEDGE_BASE_ID = os.getenv("KNOWLEDGE_BASE_ID")
+    if KNOWLEDGE_BASE_ID == "":
+        raise Exception("Incorrect ID => You should provide a correct ID for the SPARQL endpoint Knowledge Base in the environment variable KNOWLEDGE_BASE_ID")
+else:
+    raise Exception("Missing ID => You should provide a correct ID for the SPARQL endpoint Knowledge Base in the environment variable KNOWLEDGE_BASE_ID")
+KNOWLEDGE_BASE_NAME = os.getenv("KNOWLEDGE_BASE_NAME","SPARQL endpoint")
+KNOWLEDGE_BASE_DESCRIPTION = os.getenv("KNOWLEDGE_BASE_DESCRIPTION","This knowledge base represents the SPARQL endpoint provided to external users.")
+
+
 ##################
 # HELPER CLASSES #
 ##################
 
-
 class Query(BaseModel):
     value: str
-
 
 #########################
 # GENERIC START-UP CODE #
@@ -38,16 +68,16 @@ class Query(BaseModel):
 
 
 # start a smart connector and connect it to the knowledge network
-ke_url = "http://localhost:8280/rest"
-tke_client = TkeClient(ke_url)
-tke_client.connect()
+tke_client = TkeClient(KNOWLEDGE_ENGINE_URL)
+try:
+    tke_client.connect()
+except Exception as e:
+    logger.error(f"Please check whether the knowledge network is up and running at {KNOWLEDGE_ENGINE_URL}")
 
 # register the SPARQL endpoint KB to the knowledge network
-kb_id = "https://ke/sparql-endpoint"
-kb_name = "SPARQL endpoint"
-kb_desc = "This knowledge base represents the SPARQL endpoint provided to external users."
-kb = tke_client.register(KnowledgeBaseRegistrationRequest(id=kb_id, name=kb_name, description=kb_desc))
-        
+kb = tke_client.register(KnowledgeBaseRegistrationRequest(id=KNOWLEDGE_BASE_ID, name=KNOWLEDGE_BASE_NAME, description=KNOWLEDGE_BASE_DESCRIPTION))
+logger.info(f"Successfully registered Knowledge Base '{KNOWLEDGE_BASE_ID}' at the Knowledge Network")
+
 # generate a FastAPI application
 app = FastAPI(title="Knowledge Engine SPARQL Endpoint",
               description="The Knowledge Engine SPARQL Endpoint is a generic component that "
@@ -58,7 +88,7 @@ app = FastAPI(title="Knowledge Engine SPARQL Endpoint",
                             {"name": "SPARQL query execution",
                              "description": "These routes can be used to get execute a SPARQL query on an existing knowledge network."},
                             ])
-# run the app locally with the following line: uvicorn src.app:app
+# run the app locally with the following line: uvicorn app:app
 
 
 #########################
@@ -83,33 +113,51 @@ async def get():
 
 @app.post('/query/', tags=["SPARQL query execution"], description="Returns bindings for a given SPARQL query on a given knowledge network. ")
 async def post(query: Query) -> dict:
+    logger.info(f'Received query: {query.value}')
     try:
-        # first collect triples from the query
-        triples = collectTriples(translateQuery(parseQuery(query.value)).algebra,[])
-        # generate an ASK knowledge interaction from the triples
-        ki = getKnowledgeInteractionFromTriples(triples)
-        # build a registration request for the ASK knowledge interaction
-        req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])    
-        #register the ASK knowledge interaction with the 
-        registered_ki = kb.register_knowledge_interaction(req, name=ki['name'])    
-        # call the knowledge interaction without any bindings   
-        answer = registered_ki.ask([{}])
-        # build a graph that contains the triples with values in the bindingSet
-        graph = buildGraphFromTriplesAndBindings(triples, answer["bindingSet"])
-        # run the original query on the graph to get the results
-        result = graph.query(query.value)
-        # reformat the result into a SPARQL 1.1 JSON result structure
-        json_result = reformatResultIntoSPARQLJson(result)
-    
+        algebra = translateQuery(parseQuery(query.value)).algebra
+        #logger.info(str(algebra['p']['p']).split("_")[0])
+        
+        # only consider a SELECT query
+        if str(algebra).startswith("SelectQuery"):
+            logger.info("Query is a SELECT query")
+        
+            # first collect triples from the query
+            triples = collectTriples(algebra,[])
+            #pprint.pp(triples)
+
+            # generate an ASK knowledge interaction from the triples
+            ki = getKnowledgeInteractionFromTriples(triples)
+            # build a registration request for the ASK knowledge interaction
+            req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])    
+            # register the ASK knowledge interaction for the knowledge base
+            registered_ki = kb.register_knowledge_interaction(req, name=ki['name'])
+            # call the knowledge interaction without any bindings
+            answer = registered_ki.ask([{}])
+            logger.info(answer)
+            
+            # build a graph that contains the triples with values in the bindingSet
+            graph = buildGraphFromTriplesAndBindings(triples, answer["bindingSet"])
+            # run the original query on the graph to get the results
+            result = graph.query(query.value)
+            #pprint.pp(result.vars)
+            #pprint.pp(result.bindings)
+            
+            # reformat the result into a SPARQL 1.1 JSON result structure
+            json_result = reformatResultIntoSPARQLJson(result)
+            # unregister the ASK knowledge interaction for the knowledge base
+            unregisterKnowledgeInteraction(registered_ki.id)
+
+        else:
+            print("Query is not a SELECT query")
+            raise Exception("Query is not a SELECT query")
+            json_result = {}
+
         return json_result
 
-    except ValueError:
-        raise HTTPException(status_code=400,
-                            detail=f"Bad request to SPARQL endpoint: is {dat_uri} "
-                                   f"a valid URI? The full (unprefixed) URI should be used.")
     except Exception as e:
         raise HTTPException(status_code=500,
-                            detail=f"An unexpected error occurred.")
+                            detail=f"An unexpected error occurred: {e}")
 
 # example: curl -X 'POST' 'http://localhost:8000/query/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
 
@@ -120,23 +168,38 @@ async def post(query: Query) -> dict:
 
 
 def test(query: str):
-    # first collect triples from the query
-    triples = collectTriples(translateQuery(parseQuery(query)).algebra,[])
-    # generate an ASK knowledge interaction from the triples
-    ki = getKnowledgeInteractionFromTriples(triples)
-    # build a registration request for the ASK knowledge interaction
-    request = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])    
-    #register the ASK knowledge interaction with the 
-    registered_ki = kb.register_knowledge_interaction(request, name=ki['name'])    
-    # call the knowledge interaction without any bindings   
-    answer = registered_ki.ask([{}])
-    # build a graph that contains the triples with values in the bindingSet
-    graph = buildGraphFromTriplesAndBindings(triples, answer["bindingSet"])
-    # run the original query on the graph to get the results
-    result = graph.query(query)
-    # reformat the result into a SPARQL 1.1 JSON result structure
-    json_result = reformatResultIntoSPARQLJson(result)
-    
+    print(query)
+    # only consider a SELECT query
+    if str(translateQuery(parseQuery(query)).algebra).startswith("SelectQuery"):
+        print("Query is a SELECT query")
+                
+        # first collect triples from the query
+        triples = collectTriples(translateQuery(parseQuery(query)).algebra,[])
+        pprint.pp(triples)
+        
+        # generate an ASK knowledge interaction from the triples
+        ki = getKnowledgeInteractionFromTriples(triples)
+        # build a registration request for the ASK knowledge interaction
+        request = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])    
+        #register the ASK knowledge interaction with the 
+        registered_ki = kb.register_knowledge_interaction(request, name=ki['name'])    
+        # call the knowledge interaction without any bindings   
+        answer = registered_ki.ask([{}])
+        #print(answer)
+        
+        # build a graph that contains the triples with values in the bindingSet
+        graph = buildGraphFromTriplesAndBindings(triples, answer["bindingSet"])
+        # run the original query on the graph to get the results
+        result = graph.query(query)
+        #print(result.vars)
+        
+        # reformat the result into a SPARQL 1.1 JSON result structure
+        json_result = reformatResultIntoSPARQLJson(result)
+
+    else:
+        print("Query is not a SELECT query")
+        json_result = {}
+            
     return json_result
 
 
@@ -147,12 +210,18 @@ def test(query: str):
 
 def collectTriples(query: dict, triple_list: list) -> list:
     for key in query.keys():
-        #print(key)
+        #if str(query[key]).startswith("Builtin"):
+        #print(query[key])
+        #print()
         if key == 'triples':
             triple_list = triple_list + query['triples']
         else:
             if isinstance(query[key],dict):
                 triple_list = collectTriples(query[key],triple_list)
+            if isinstance(query[key],list):
+                for element in query[key]:
+                    if isinstance(element,dict):
+                        triple_list = collectTriples(element,triple_list)
 
     return triple_list
 
@@ -235,4 +304,21 @@ def reformatResultIntoSPARQLJson(result:dict) -> dict:
         json_result["results"] = {"bindings": bindings}
 
     return json_result
+
+
+###########################
+#   MISSING KB FUNCTIONS  #
+###########################
+
+
+def unregisterKnowledgeInteraction(ki):
+
+    response = requests.delete(
+        f"{KNOWLEDGE_ENGINE_URL}/sc/ki", headers={"Knowledge-Base-Id": KNOWLEDGE_BASE_ID, "Knowledge-Interaction-Id": ki}
+    )
+
+    if not response.ok:
+        raise UnexpectedHttpResponseError(response)
+
+
 

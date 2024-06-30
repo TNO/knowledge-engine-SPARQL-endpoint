@@ -1,0 +1,13 @@
+services:
+  sparql-endpoint:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - KNOWLEDGE_ENGINE_URL=${KNOWLEDGE_ENGINE_URL}
+      - KNOWLEDGE_BASE_ID=${KNOWLEDGE_BASE_ID}
+      - KNOWLEDGE_BASE_NAME=${KNOWLEDGE_BASE_NAME}
+      - KNOWLEDGE_BASE_DESCRIPTION=${KNOWLEDGE_BASE_DESCRIPTION}
+    restart: unless-stopped
+    ports:
+      - "${PORT}:8000"

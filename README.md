@@ -1,5 +1,47 @@
 # Knowledge Engine SPARQL Endpoint
 
+The Knowledge Engine SPARQL Endpoint provides an endpoint of a knowledge network that allows SPARQL queries to be fired on the knowledge network.
+
+## Running the endpoint as a Docker image
+
+The Knowledge Engine SPARQL Endpoint is available as a Docker image in the Container Registry of the project on the Gitlab environment of TNO:
+
+`https://ci.tno.nl/gitlab/tke/knowledge-engine-sparql-endpoint/container_registry`
+
+All tagged versions of the endpoint can be found there.
+
+The latest (and greatest) image of the endpoint is available under the following link:
+
+`ci.tno.nl:4567/tke/knowledge-engine-sparql-endpoint:latest`
+
+The endpoint assumes that 5 environment variables are available.
+
+- KNOWLEDGE_ENGINE_URL: the URL of the Knowledge Network to which you want to fire your SPARQL query.
+- KNOWLEDGE_BASE_ID: the ID of the SPARQL endpoint that you want to register at the Knowledge Network.
+- KNOWLEDGE_BASE_NAME: the name of the SPARQL endpoint that you want to register at the Knowledge Network.
+- KNOWLEDGE_BASE_DESCRIPTION: the description of the SPARQL endpoint that you want to register at the Knowledge Network.
+- PORT: the number of the port via which you want to expose your SPARQL endpoint.
+
+An example of the values for these 5 environment variables is:
+
+```
+KNOWLEDGE_ENGINE_URL=http://host.docker.internal:8280/rest
+KNOWLEDGE_BASE_ID=https://ke/sparql-endpoint
+KNOWLEDGE_BASE_NAME="SPARQL endpoint"
+KNOWLEDGE_BASE_DESCRIPTION="This knowledge base represents the SPARQL endpoint provided to external users."
+PORT=8000
+```
+
+When using docker-compose these environment variables can be made available via the .env file. An example of this file can be found here:
+
+
+
+
+
+
+
+
+
 
 
 ## Getting started
