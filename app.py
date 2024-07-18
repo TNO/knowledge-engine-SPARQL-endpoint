@@ -124,14 +124,18 @@ async def post(query: Query) -> dict:
         
             # first collect triples from the query
             triples = collectTriples(algebra,[])
-            #pprint.pp(triples)
+            logger.info(triples)
 
             # generate an ASK knowledge interaction from the triples
             ki = getKnowledgeInteractionFromTriples(triples)
+            logger.info(ki)
+            
             # build a registration request for the ASK knowledge interaction
-            req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])    
+            req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])
+            
             # register the ASK knowledge interaction for the knowledge base
             registered_ki = kb.register_knowledge_interaction(req, name=ki['name'])
+            
             # call the knowledge interaction without any bindings
             answer = registered_ki.ask([{}])
             logger.info(answer)
@@ -191,13 +195,17 @@ def convertTriplesToPattern(triples: list) -> str:
         t = ""        
         if isinstance(triple[0],rdflib.term.Variable):
             t = t+"?"+triple[0]
-        if isinstance(triple[1],rdflib.term.URIRef):
+
+        if isinstance(triple[1],rdflib.term.Variable):
+            t = t+" ?"+triple[1]
+        elif isinstance(triple[1],rdflib.term.URIRef):
             t = t+" <"+str(triple[1])+">"
+
         if isinstance(triple[2],rdflib.term.Variable):
             t = t+" ?"+triple[2]
-        else:
-            if isinstance(triple[2],rdflib.term.URIRef):
-                t = t+" <"+str(triple[2])+">"
+        elif isinstance(triple[2],rdflib.term.URIRef):
+            t = t+" <"+str(triple[2])+">"
+        
         t = t+" ."
         if pattern == "":
             pattern = t
