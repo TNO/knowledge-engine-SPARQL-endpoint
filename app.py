@@ -163,47 +163,6 @@ async def post(query: Query) -> dict:
 
 
 ###########################
-# TEMPORARY TEST FUNCTION #
-###########################
-
-
-def test(query: str):
-    print(query)
-    # only consider a SELECT query
-    if str(translateQuery(parseQuery(query)).algebra).startswith("SelectQuery"):
-        print("Query is a SELECT query")
-                
-        # first collect triples from the query
-        triples = collectTriples(translateQuery(parseQuery(query)).algebra,[])
-        pprint.pp(triples)
-        
-        # generate an ASK knowledge interaction from the triples
-        ki = getKnowledgeInteractionFromTriples(triples)
-        # build a registration request for the ASK knowledge interaction
-        request = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])    
-        #register the ASK knowledge interaction with the 
-        registered_ki = kb.register_knowledge_interaction(request, name=ki['name'])    
-        # call the knowledge interaction without any bindings   
-        answer = registered_ki.ask([{}])
-        #print(answer)
-        
-        # build a graph that contains the triples with values in the bindingSet
-        graph = buildGraphFromTriplesAndBindings(triples, answer["bindingSet"])
-        # run the original query on the graph to get the results
-        result = graph.query(query)
-        #print(result.vars)
-        
-        # reformat the result into a SPARQL 1.1 JSON result structure
-        json_result = reformatResultIntoSPARQLJson(result)
-
-    else:
-        print("Query is not a SELECT query")
-        json_result = {}
-            
-    return json_result
-
-
-###########################
 #    HELPER FUNCTIONS     #
 ###########################
 
