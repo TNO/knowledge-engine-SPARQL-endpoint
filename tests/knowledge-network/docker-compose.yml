@@ -78,25 +78,41 @@ services:
             "struc": "<https://www.tno.nl/defense/ontology/c2/gas-provider-Lithuania>"
           }
         ]
-  kb3:
+  answer-kb:
     build: ./answering_kb
     environment:
-      KE_URL: http://runtime-3:8280/rest
-      KB_ID: http://example.org/kb3
+      KE_URL: http://host.docker.internal:8280/rest
+      KB_ID: http://example.org/an-answer-knowledge-base-id
       PREFIXES: |
         {
           "ex": "http://example.org/"
         }
       GRAPH_PATTERN: |
-        ?a ex:relatedTo ?b .
+        ?a ex:isRelatedTo ?b .
       KB_DATA: |
         [
           {
-            "a": "<http://example.org/Music>",
-            "b": "<http://example.org/Songs>"
-          },
+            "a": "<http://example.org/Barry>",
+            "b": "<http://example.org/Jack>"
+          }
+        ]
+  react-kb:
+    build: ./react_kb
+    environment:
+      KE_URL: http://host.docker.internal:8280/rest
+      KB_ID: http://example.org/a-react-knowledge-base-id
+      PREFIXES: |
+        {
+          "ex": "http://example.org/"
+        }
+      ARGUMENT_GRAPH_PATTERN: |
+        ?a ex:liveInTheSameHouse ?b .
+      RESULT_GRAPH_PATTERN: |
+        ?a ex:isRelatedTo ?b .
+      KB_DATA: |
+        [
           {
-            "a": "<http://example.org/Red>",
-            "b": "<http://example.org/Blue>"
+            "a": "<http://example.org/Barry>",
+            "b": "<http://example.org/Jack>"
           }
         ]
