@@ -112,7 +112,7 @@ services:
       KB_DATA: |
         [
           {
-            "a": "<http://example.org/Barry>",
+            "a": "<http://example.org/Celine>",
             "b": "<http://example.org/Jack>"
           }
         ]
