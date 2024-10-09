@@ -6,13 +6,9 @@ The Knowledge Engine SPARQL Endpoint provides an endpoint of a knowledge network
 
 The Knowledge Engine SPARQL Endpoint is available as a Docker image in the Container Registry of the project on the Gitlab environment of TNO:
 
-`https://ci.tno.nl/gitlab/tke/knowledge-engine-sparql-endpoint/container_registry`
+[knowledge-engine-sparql-endpoint/container_registry](https://ci.tno.nl/gitlab/tke/knowledge-engine-sparql-endpoint/container_registry/3409)
 
-All tagged versions of the endpoint can be found there.
-
-The current version of image of the endpoint is available under the following link:
-
-`ci.tno.nl:4567/tke/knowledge-engine-sparql-endpoint:1.0.0`
+All tagged versions of the endpoint can be found there. The latest version of the image of the endpoint is available with the highest tag number.
 
 The endpoint assumes that 5 environment variables are available.
 
@@ -65,10 +61,8 @@ For example:
 In the current version only SPARQL SELECT queries are accepted that have a basic graph pattern in the WHERE clause. In addition, a FILTER construct can be added as well.
 Other constructs will be handled in future versions of the endpoint.
 
-The result of the query will be returned as a SPARQL 1.1 Query Results JSON Format as defined in `https://www.w3.org/TR/sparql11-results-json/`
+The result of the query will be returned as a SPARQL 1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
 
-As the endpoint is implemented as a FastAPI, more information about the routes is available in the `/docs` route of the endpoint.
+As the endpoint is implemented as a FastAPI, more information about the routes is available in the `/docs` route of the endpoint. The endpoint is CORS-enabled, so it can be called for by any website as of now. Further limitations for this access needs to be added when necessary.
 
-
-
-
+The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. Mature Python unit test files need to be added as well. The current `.py` is an immature first version for this.
