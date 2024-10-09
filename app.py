@@ -9,6 +9,7 @@ import logging
 # api imports
 from fastapi import FastAPI, HTTPException, Response, Body, Query
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # graph imports
@@ -88,6 +89,16 @@ app = FastAPI(title="Knowledge Engine SPARQL Endpoint",
                             {"name": "SPARQL query execution",
                              "description": "These routes can be used to get execute a SPARQL query on an existing knowledge network."},
                             ])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # run the app locally with the following line: uvicorn app:app
 
 
