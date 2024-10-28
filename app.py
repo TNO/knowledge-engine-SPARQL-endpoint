@@ -28,8 +28,14 @@ logging.basicConfig(level=logging.INFO)
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
-    if TOKEN_ENABLED != "True" and TOKEN_ENABLED != "False":
-        raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
+    match TOKEN_ENABLED:
+        case "True":
+            TOKEN_ENABLED = True
+        case "False":
+            TOKEN_ENABLED = False
+        case _:
+            raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
+    logger.info(f"TOKEN_ENABLED is: {TOKEN_ENABLED}")
 else: # no token_enabled flag, so set the flag to false
     raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 
@@ -79,18 +85,26 @@ async def root():
 
 
 # example: curl -X 'POST' 'http://localhost:8000/query/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
-@app.post('/query/', tags=["SPARQL query execution"], description="Returns bindings for a given SPARQL query by a requester on a given knowledge network. ")
+@app.post('/query/',
+          tags=["SPARQL query execution"], 
+          description="""
+              Returns bindings for a given SPARQL query by a requester on a given knowledge network.
+          """
+          )
 async def post(params: QueryInputParameters) -> dict:
-    logger.info(f'Received query: {params.query} with token')
+    logger.info(f'Received query: {params.query}')
     query = params.query
     
-    # check validity of token and get the requester ID 
-    try:
-        requester_id = ttp_client.validate_token(params.token)
-    except Exception as e:
-        raise HTTPException(status_code=401,
-                            detail=f"Unauthorized: {e}")
-    logger.info(f'Token validity successfully checked and received a requester_id!')
+    if TOKEN_ENABLED:
+        # check validity of token and get the requester ID 
+        try:
+            requester_id = ttp_client.validate_token(params.token)
+        except Exception as e:
+            raise HTTPException(status_code=401,
+                                detail=f"Unauthorized: {e}")
+        logger.info(f'Token validity successfully checked and received a requester_id!')
+    else:
+        requester_id = "requester"
 
     # check whether the requester's knowledge base already exists, if not create it
     try:
