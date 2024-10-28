@@ -33,7 +33,7 @@ def constructPattern(query: str) -> list:
     # only consider SELECT queries
     if not str(algebra).startswith("SelectQuery"):
         raise Exception(f"Query {query} is not a SELECT query")
-    logger.info("Query is a SELECT query")
+    logger.debug("Query is a SELECT query")
     # collect the pattern of triples from the query
     graph_pattern = collectTriples(algebra,[])
     #logger.info(f'Triple patterns derived from the query are: {triples}')

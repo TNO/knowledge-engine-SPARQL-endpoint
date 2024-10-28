@@ -35,7 +35,6 @@ if "TOKEN_ENABLED" in os.environ:
             TOKEN_ENABLED = False
         case _:
             raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
-    logger.info(f"TOKEN_ENABLED is: {TOKEN_ENABLED}")
 else: # no token_enabled flag, so set the flag to false
     raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 
@@ -102,7 +101,7 @@ async def post(params: QueryInputParameters) -> dict:
         except Exception as e:
             raise HTTPException(status_code=401,
                                 detail=f"Unauthorized: {e}")
-        logger.info(f'Token validity successfully checked and received a requester_id!')
+        logger.debug(f'Token validity successfully checked and received a requester_id!')
     else:
         requester_id = "requester"
 
@@ -119,7 +118,7 @@ async def post(params: QueryInputParameters) -> dict:
     except Exception as e:
         raise HTTPException(status_code=400,
                             detail=f"Bad request, malformed query syntax: {e}")
-    logger.info(f"Successfully constructed pattern from the query {graph_pattern}!")
+    logger.debug(f"Successfully constructed pattern from the query {graph_pattern}!")
 
     # search bindings for the pattern in the knowledge network
     try:
@@ -127,7 +126,7 @@ async def post(params: QueryInputParameters) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f"An unexpected error occurred: {e}")
-    logger.info(f"Knowledge network successfully responded to the ask pattern with answer {answer}!")
+    logger.debug(f"Knowledge network successfully responded to the ask pattern with answer {answer}!")
     
     # execute the query on the retrieved binding set
     try:
@@ -135,6 +134,7 @@ async def post(params: QueryInputParameters) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f"An unexpected error occurred: {e}")
+    logger.info(f"SPARQL Endpoint generated the following result to the query {result}!")
 
     return result
 
