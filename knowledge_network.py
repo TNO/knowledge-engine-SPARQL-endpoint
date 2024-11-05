@@ -13,6 +13,7 @@ from knowledge_mapper.knowledge_base import KnowledgeBaseRegistrationRequest
 from knowledge_mapper.knowledge_base import KnowledgeBase
 from knowledge_mapper import knowledge_interaction
 from knowledge_mapper.knowledge_interaction import AskKnowledgeInteractionRegistrationRequest
+from knowledge_mapper.tke_exceptions import UnexpectedHttpResponseError
 
 ####################
 # ENABLING LOGGING #
@@ -66,8 +67,7 @@ def check_knowledge_base_existence(requester_id: str):
         try:
             knowledge_bases[req_kb_id] = create_knowledge_base(req_kb_id)    
         except Exception as e:
-            raise HTTPException(status_code=500,
-                                detail=f'An unexpected error occurred: {e}')
+            raise Exception(f'An unexpected error occurred: {e}')
         logger.info(f"Successfully registered a Knowledge Base for '{requester_id}' at the Knowledge Network")
     else:
         logger.info(f"Knowledge Base for '{requester_id}' already created at the Knowledge Network")
@@ -78,10 +78,13 @@ def create_knowledge_base(kb_id: str) -> KnowledgeBase:
     # register the SPARQL endpoint to the knowledge network as a new Knowledge Base for the requester
     kb_name = "SPARQL endpoint "+kb_id
     try:
-        kb = tke_client.register(KnowledgeBaseRegistrationRequest(id=kb_id, name=kb_name, description=""))
+        kb = tke_client.register(KnowledgeBaseRegistrationRequest(id=kb_id, name=kb_name, description=""),
+                                 reregister = False)
     except Exception as e:
-        raise Exception(f'Failed to register a new knowledge base with ID {kb_id}: {e}')
-    
+        raise Exception(f'Failed to register a knowledge base {kb_id} at the knowledge network: {e}')
+    # if kb is None, a knowledge base with this kb_id already exists
+    if kb == None:
+        raise Exception(f'Knowledge base with id {kb_id} already exists!')
     return kb
 
 
