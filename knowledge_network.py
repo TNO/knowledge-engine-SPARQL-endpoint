@@ -122,13 +122,21 @@ def getKnowledgeInteractionFromTriples(triples: list) -> dict:
     return knowledge_interaction
 
 
-
 def unregisterKnowledgeInteraction(kb_id, ki):
     response = requests.delete(
         f"{KNOWLEDGE_ENGINE_URL}/sc/ki", headers={"Knowledge-Base-Id": kb_id, "Knowledge-Interaction-Id": ki}
     )
     if not response.ok:
         raise UnexpectedHttpResponseError(response)
+
+
+def unregisterKnowledgeBases():
+    logger.info("Unregistering knowledge bases!")
+    for key in knowledge_bases.keys():
+        logger.info(f'Key is {key}')
+        kb = knowledge_bases[key]
+        kb.unregister()
+        logger.info(f'Unregistered kb {kb}')
 
 
 ####################

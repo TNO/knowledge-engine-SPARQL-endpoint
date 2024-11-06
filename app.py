@@ -3,10 +3,12 @@ import os
 import logging
 
 # api imports
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response, Body
 from fastapi.responses import JSONResponse
+from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # import other py's from this repository
 import local_query_executor
@@ -37,6 +39,7 @@ if "TOKEN_ENABLED" in os.environ:
             raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 else: # no token_enabled flag, so set the flag to false
     raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
+logger.info(f'TOKEN_ENABLED is set to {TOKEN_ENABLED}')
 
 
 ##################
@@ -44,8 +47,24 @@ else: # no token_enabled flag, so set the flag to false
 ##################
 
 class QueryInputParameters(BaseModel):
-    token: str
-    query: str
+    token: str | None = Field(default=None, title="The token that secretly identifies the requester")
+    query: str = Field(description="The SPARQL query to be handled by the endpoint")
+
+
+##########################
+# START PROCESS LIFESPAN #
+##########################
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # code to execute upon starting the API
+    logger.info("--- Knowledge Engine SPARQL Endpoint is starting ---")
+    
+    yield
+    # code to execute upon stopping the API
+    logger.info("--- Knowledge Engine SPARQL Endpoint is stopping because yield has entered ---")
+    # unregister all knowledge bases!!
+    knowledge_network.unregisterKnowledgeBases()
 
 
 #########################
@@ -60,8 +79,9 @@ app = FastAPI(title="Knowledge Engine SPARQL Endpoint",
               openapi_tags=[{"name": "Connection Test",
                              "description": "These routes can be used to test the connection of the API."},
                             {"name": "SPARQL query execution",
-                             "description": "These routes can be used to get execute a SPARQL query on an existing knowledge network."},
-                            ])
+                             "description": "These routes can be used to execute a SPARQL query on an existing knowledge network."},
+                            ],
+              lifespan=lifespan)
 
 # enable CORS for the application, so that it can be used cross-origin by websites
 app.add_middleware(
@@ -87,11 +107,31 @@ async def root():
 @app.post('/query/',
           tags=["SPARQL query execution"], 
           description="""
-              Returns bindings for a given SPARQL query by a requester on a given knowledge network.
+              This POST operation accepts in the request body a correct SPARQL 1.1 query from a requester.
+              It will fire this query onto the knowledge network that is provided to the SPARQL endpoint and
+              returns bindings for the query in JSON format according to the SPARQL 1.1 Query Results specification.
+              When tokens are enabled by the endpoint,
+              each request must be accompanied by a valid secret token for the requester."
           """
           )
-async def post(params: QueryInputParameters) -> dict:
+async def post(params: Annotated[
+                            QueryInputParameters,
+                            Body(
+                                openapi_examples={
+                                    "default": {
+                                        "description": "the default usage is to only provide a correct SPARQL query",
+                                        "value": {"query": "SELECT * WHERE { ?s ?p ?o }"}
+                                        },
+                                    "token_enabled": {
+                                        "description": "when tokens are enabled, a correct token needs to be provided",
+                                        "value": {"token": "1234", "query": "SELECT * WHERE { ?s ?p ?o }"}
+                                        }
+                                }
+                            )
+                        ]
+            ) -> dict:
     logger.info(f'Received query: {params.query}')
+    logger.info(f'Received token: {params.token}')
     query = params.query
     
     if TOKEN_ENABLED:
