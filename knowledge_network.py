@@ -2,6 +2,7 @@
 import os
 import requests
 import logging
+import uuid
 
 # graph imports
 import rdflib
@@ -91,13 +92,13 @@ def create_knowledge_base(kb_id: str) -> KnowledgeBase:
 # Params => IN: req_kb_id, pattern, OUT: answer
 def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list:
     req_kb_id = KNOWLEDGE_BASE_ID_PREFIX+requester_id
+    # get the requesters' knowledge base
+    requester_kb = knowledge_bases[req_kb_id]
     # generate an ASK knowledge interaction from the triples
     ki = getKnowledgeInteractionFromTriples(graph_pattern)
     #logger.info(f'Knowledge interaction derived from triples is: {ki}')
     # build a registration request for the ASK knowledge interaction
     req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])
-    # get the requesters' knowledge base
-    requester_kb = knowledge_bases[req_kb_id]
     # register the ASK knowledge interaction for the knowledge base
     registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
     # call the knowledge interaction without any bindings
@@ -110,15 +111,13 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list
 
 
 def getKnowledgeInteractionFromTriples(triples: list) -> dict:
-    
     knowledge_interaction = {
-      "name": "sparql-query-ask",
+      "name": "sparql-query-ask-"+str(uuid.uuid1()),
       "type": "ask"
     }
     # get variables and pattern from the triples
     knowledge_interaction["vars"] = getVarsFromTriples(triples)
     knowledge_interaction["pattern"] = convertTriplesToPattern(triples)
-    
     return knowledge_interaction
 
 
