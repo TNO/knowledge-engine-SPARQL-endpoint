@@ -34,6 +34,14 @@ TOKEN_ENABLED=True
 TOKENS_FILE_PATH=./tokens_to_requesters.json
 ```
 
+In addition, the following optional environment variable can be set.
+
+- SPARQL_ENDPOINT_NAME: the name of the SPARQL endpoint that is specific for the application in which it is used. Default value is: Knowledge Engine
+
+```
+SPARQL_ENDPOINT_NAME=The SPARQL apostle
+```
+
 When using docker-compose these environment variables can be made available via the .env file. An example of this file can be found here:
 
 `https://ci.tno.nl/gitlab/tke/knowledge-engine-sparql-endpoint/-/blob/main/.env`
