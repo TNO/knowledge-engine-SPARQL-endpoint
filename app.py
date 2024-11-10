@@ -28,6 +28,8 @@ logging.basicConfig(level=logging.INFO)
 # ENVIRONMENT VARS #
 ####################
 
+SPARQL_ENDPOINT_NAME = os.getenv("SPARQL_ENDPOINT_NAME","Knowledge Engine")
+
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
     match TOKEN_ENABLED:
@@ -72,10 +74,12 @@ async def lifespan(app: FastAPI):
 #########################
 
 # generate a FastAPI application
-app = FastAPI(title="Knowledge Engine SPARQL Endpoint",
-              description="The Knowledge Engine SPARQL Endpoint is a generic component that "
-                          "takes a SPARQL query as input, fires this query to an existing knowledge network "
-                          "and returns the collected bindings as a JSON string",
+app = FastAPI(title=f"{SPARQL_ENDPOINT_NAME} SPARQL Endpoint",
+              description="This SPARQL Endpoint is a generic component that takes a SPARQL query as input, "
+                          "fires this query to an existing knowledge network and returns the collected "
+                          f"bindings as a JSON string. The endpoint token enabled flag is set to {TOKEN_ENABLED}. "
+                          "If so, the queries need to be accompanied with a token to ensure trusted and "
+                          "secure access via an identification and authentication service.",
               openapi_tags=[{"name": "Connection Test",
                              "description": "These routes can be used to test the connection of the API."},
                             {"name": "SPARQL query execution",
