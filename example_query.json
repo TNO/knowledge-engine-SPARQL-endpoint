@@ -1,0 +1,3 @@
+  {
+    "query": "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>    PREFIX om: <http://www.ontology-of-units-of-measure.org/resource/om-2/>    PREFIX hco: <https://www.tno.nl/building/ontology/heatpump-common-ontology#>    PREFIX saref: <https://saref.etsi.org/core/>    SELECT * WHERE {        ?heatpump rdf:type hco:Heatpump .        ?measurement rdf:type saref:Measurement .         ?measurement saref:measurementMadeBy ?heatpump .         ?measurement saref:relatesToProperty hco:roomTemperature .         ?measurement saref:isMeasuredIn om:degreeCelsius .         ?measurement saref:hasValue ?roomTemperature . }"
+  }
