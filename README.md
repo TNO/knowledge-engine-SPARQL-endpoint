@@ -94,7 +94,15 @@ For example:
 
 ## Documentation
 
-As the endpoint is implemented as a FastAPI, more information about the routes is available in the `/docs` route of the endpoint. The endpoint is CORS-enabled, so it can be called for by any website as of now. Further limitations for this access needs to be added when necessary.
+As the endpoint is implemented as a FastAPI, more information about the routes is available in the `/docs` route of the endpoint. The `request body` of the `query route` provides some examples of queries that can be used to "try it out". By default the example query is `SELECT * WHERE {?s ?p ?o}`. If you want to replace this default query with a query that is more suited to your application of the SPARQL endpoint, you can add a file named `example_query.json` to the folder in which the `.py` files are located. This JSON file should contain a single object with only a `query` field that contains the example query. For instance, as follows for the heatpump application domain:
+
+```{
+    "query": "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>    PREFIX om: <http://www.ontology-of-units-of-measure.org/resource/om-2/>    PREFIX hco: <https://www.tno.nl/building/ontology/heatpump-common-ontology#>    PREFIX saref: <https://saref.etsi.org/core/>    SELECT * WHERE {        ?heatpump rdf:type hco:Heatpump .        ?measurement rdf:type saref:Measurement .         ?measurement saref:measurementMadeBy ?heatpump .         ?measurement saref:relatesToProperty hco:roomTemperature .         ?measurement saref:isMeasuredIn om:degreeCelsius .         ?measurement saref:hasValue ?roomTemperature . }"
+   }
+```
+
+
+Furthermore, the endpoint is CORS-enabled, so it can be called for by any website as of now. Further limitations for this access needs to be added when necessary.
 
 ## Tests
 

@@ -1,6 +1,7 @@
 # basic imports
 import os
 import logging
+import json
 
 # api imports
 from contextlib import asynccontextmanager
@@ -42,6 +43,13 @@ if "TOKEN_ENABLED" in os.environ:
 else: # no token_enabled flag, so set the flag to false
     raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 logger.info(f'TOKEN_ENABLED is set to {TOKEN_ENABLED}')
+
+try:
+    with open("./example_query.json") as f:
+        queries = json.load(f)
+        EXAMPLE_QUERY = queries['query']
+except:
+    EXAMPLE_QUERY = "SELECT * WHERE {?s ?p ?o}"
 
 
 ##################
@@ -124,11 +132,11 @@ async def post(params: Annotated[
                                 openapi_examples={
                                     "default": {
                                         "description": "the default usage is to only provide a correct SPARQL query",
-                                        "value": {"query": "SELECT * WHERE { ?s ?p ?o }"}
+                                        "value": {"query": f"{EXAMPLE_QUERY}"}
                                         },
                                     "token_enabled": {
                                         "description": "when tokens are enabled, a correct token needs to be provided",
-                                        "value": {"token": "1234", "query": "SELECT * WHERE { ?s ?p ?o }"}
+                                        "value": {"token": "1234", "query": f"{EXAMPLE_QUERY}"}
                                         }
                                 }
                             )
