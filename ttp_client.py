@@ -37,7 +37,7 @@ if TOKEN_ENABLED:
         if TOKENS_FILE_PATH == "":
             raise Exception("Incorrect TOKENS_FILE_PATH => You should provide a correct TOKENS_FILE_PATH environment variable!")
     else: # no token_enabled flag, so set the flag to false
-        raise Exception("Missing TOKENS_FILE_PATH => You should provide a correct TOKENS_FILE_PATH environment variable!")
+        raise Exception("Missing TOKENS_FILE_PATH => If TOKEN_ENABLED is set, you should provide a correct TOKENS_FILE_PATH environment variable!")
 
     token_to_requestor_id_mapping = {}
     with open(TOKENS_FILE_PATH) as f:
