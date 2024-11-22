@@ -9,6 +9,9 @@ services:
       - TOKEN_ENABLED=${TOKEN_ENABLED}
       - TOKENS_FILE_PATH=${TOKENS_FILE_PATH}
       - SPARQL_ENDPOINT_NAME=${SPARQL_ENDPOINT_NAME}
+      - ENABLE_REASONER=true
     restart: unless-stopped
     ports:
       - "${PORT}:8000"
+    volumes:
+      - .:/app
