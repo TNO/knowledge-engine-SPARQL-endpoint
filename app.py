@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 # import other py's from this repository
 import local_query_executor
-import pattern_extractor
+import graph_constructor
 import knowledge_network
 import ttp_client
 
@@ -22,8 +22,11 @@ import ttp_client
 ####################
 
 logger = logging.getLogger(__name__)
+#LOG_LEVEL = os.getenv("LOG_LEVEL")
+#if LOG_LEVEL == "DEBUG":
+#    logger.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.INFO)
-
+#logger.info(f"log level is {LOG_LEVEL}")
 
 ####################
 # ENVIRONMENT VARS #
@@ -35,7 +38,7 @@ if "ENABLE_REASONER" in os.environ:
     ENABLE_REASONER = os.getenv("ENABLE_REASONER")
 else:
     ENABLE_REASONER = False    
-logger.info(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
+logger.debug(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
@@ -149,7 +152,7 @@ async def post(params: Annotated[
                         ]
             ) -> dict:
     logger.info(f'Received query: {params.query}')
-    logger.info(f'Received token: {params.token}')
+    #logger.info(f'Received token: {params.token}')
     query = params.query
     
     if TOKEN_ENABLED:
@@ -159,7 +162,7 @@ async def post(params: Annotated[
         except Exception as e:
             raise HTTPException(status_code=401,
                                 detail=f"Unauthorized: {e}")
-        logger.debug(f'Token validity successfully checked and received a requester_id!')
+        logger.info(f'Token validity successfully checked and received a requester_id!')
     else:
         requester_id = "requester"
 
@@ -169,26 +172,18 @@ async def post(params: Annotated[
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f'An unexpected error occurred: {e}')
-    
-    # get the graph pattern from the query
+
+    # take the query and build a graph with bindings from the knowledge network needed to satisfy the query
     try:
-        graph_pattern = pattern_extractor.constructPattern(query)
+        graph = graph_constructor.constructGraphFromKnowledgeNetwork(query, requester_id)
     except Exception as e:
         raise HTTPException(status_code=400,
                             detail=f"Bad request, malformed query syntax: {e}")
-    logger.debug(f"Successfully constructed pattern from the query {graph_pattern}!")
+    logger.info(f"Successfully constructed a graph from the knowledge network!")
 
-    # search bindings for the pattern in the knowledge network
+    # execute the query on the graph with the retrieved bindings
     try:
-        answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id,graph_pattern)
-    except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"An unexpected error occurred: {e}")
-    logger.debug(f"Knowledge network successfully responded to the ask pattern with answer {answer}!")
-    
-    # execute the query on the retrieved binding set
-    try:
-        result = local_query_executor.generateGraphAndExecuteQuery(graph_pattern, answer["bindingSet"], query)
+        result = local_query_executor.executeQuery(graph, query)
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f"An unexpected error occurred: {e}")
