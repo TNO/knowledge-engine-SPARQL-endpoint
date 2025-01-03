@@ -43,7 +43,7 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
     if not str(algebra).startswith("SelectQuery"):
         raise Exception(f"Only SELECT queries are supported!")
     try:
-        addNamespaces(query)
+        lc.addNamespaces(query)
     except Exception as e:
         logger.warning("Could not retrieve prefixes, defaulting to using complete URIs!")
         #raise Exception(f"Could not retrieve prefixes, {e}")
@@ -57,16 +57,17 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
     lc.showPattern(main_graph_pattern, "main")
     for p in optional_graph_patterns:
         lc.showPattern(p, "optional")
-    logger.info('Main graph pattern and optional graph patterns are derived')
     # search bindings for the graph patterns in the knowledge network and build a local graph of them
     try:
         graph = Graph()
+        logger.info('Main graph pattern is being asked to the knowledge network!')
         # first request main graph pattern from knowledge network
         answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id,main_graph_pattern)
         logger.debug(f'Received answer: {answer["bindingSet"]}')
         # extend the graph with the triples and values in the bindings
         graph = buildGraphFromTriplesAndBindings(graph, main_graph_pattern, answer["bindingSet"])
         # second, loop over all optional graph patterns and add the bindings to the graph
+        logger.info('Optional graph patterns are being asked to the knowledge network!')
         for pattern in optional_graph_patterns:
             answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id, pattern)
             logger.debug(f'Received answer: {answer["bindingSet"]}')
@@ -74,7 +75,7 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
             graph = buildGraphFromTriplesAndBindings(graph, pattern, answer["bindingSet"])
     except Exception as e:
         raise Exception(f"An error occurred when contacting the knowledge network: {e}")
-    logger.info(f"Knowledge network successfully responded to the all the ask patterns!")
+    logger.info(f"Knowledge network successfully responded to all the ask patterns!")
 
     return graph
 

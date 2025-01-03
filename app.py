@@ -23,11 +23,7 @@ import ttp_client
 ####################
 
 logger = logging.getLogger(__name__)
-#LOG_LEVEL = lc.LOG_LEVEL
-#if LOG_LEVEL == "DEBUG":
 logger.setLevel(lc.LOG_LEVEL)
-#logging.basicConfig(level=logging.DEBUG)
-#logger.info(f"log level is {LOG_LEVEL}")
 
 
 ####################
@@ -40,7 +36,7 @@ if "ENABLE_REASONER" in os.environ:
     ENABLE_REASONER = os.getenv("ENABLE_REASONER")
 else:
     ENABLE_REASONER = False    
-logger.debug(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
+logger.info(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
@@ -154,7 +150,7 @@ async def post(params: Annotated[
                         ]
             ) -> dict:
     logger.info(f'Received query: {params.query}')
-    #logger.info(f'Received token: {params.token}')
+    logger.debug(f'Received token: {params.token}')
     query = params.query
     
     if TOKEN_ENABLED:

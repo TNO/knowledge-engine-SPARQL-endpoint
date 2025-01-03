@@ -6,7 +6,7 @@ from rdflib import Graph
 # SET LOGGING LEVEL #
 #####################
 
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 ####################
 # ENABLING LOGGING #

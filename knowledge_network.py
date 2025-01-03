@@ -97,17 +97,16 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list
     requester_kb = knowledge_bases[req_kb_id]
     # generate an ASK knowledge interaction from the triples
     ki = getKnowledgeInteractionFromTriples(graph_pattern)
-    #logger.info(f'Knowledge interaction derived from triples is: {ki}')
+    logger.debug(f'Knowledge interaction derived from triples is: {ki}')
     # build a registration request for the ASK knowledge interaction
     req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])
     # register the ASK knowledge interaction for the knowledge base
     registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
     # call the knowledge interaction without any bindings
     answer = registered_ki.ask([{}])
-    #logger.info(f'Answer for the knowledge network is: {answer}')
+    logger.debug(f'Answer for the knowledge network is: {answer}')
     # unregister the ASK knowledge interaction for the knowledge base
     unregisterKnowledgeInteraction(req_kb_id, registered_ki.id)
-    #logger.info(f'Successfully unregistered the knowledge interaction and finished handling the query!')
     return answer
 
 
@@ -133,10 +132,10 @@ def unregisterKnowledgeInteraction(kb_id, ki):
 def unregisterKnowledgeBases():
     logger.info("Unregistering knowledge bases!")
     for key in knowledge_bases.keys():
-        logger.info(f'Key is {key}')
+        logger.debug(f'Key is {key}')
         kb = knowledge_bases[key]
         kb.unregister()
-        logger.info(f'Unregistered kb {kb}')
+        logger.debug(f'Unregistered kb {kb}')
 
 
 ####################
