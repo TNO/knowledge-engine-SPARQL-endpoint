@@ -1,8 +1,9 @@
 # basic imports
 import os
 import requests
-import logging
 import uuid
+import logging
+import logging_config as lc
 
 # graph imports
 import rdflib
@@ -21,7 +22,7 @@ from knowledge_mapper.tke_exceptions import UnexpectedHttpResponseError
 ####################
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger.setLevel(lc.LOG_LEVEL)
 
 ####################
 # ENVIRONMENT VARS #

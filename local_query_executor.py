@@ -1,6 +1,7 @@
 # basic imports
 import pprint
 import logging
+import logging_config as lc
 
 # graph imports
 import rdflib
@@ -9,12 +10,12 @@ from rdflib import RDF, Graph, Namespace, URIRef, Literal
 
 # enable logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger.setLevel(lc.LOG_LEVEL)
+
 
 ####################################
 #    QUERY EXECUTION FUNCTIONS     #
 ####################################
-
 
 def executeQuery(graph: Graph, query: str) -> dict:
     # run the original query on the graph to get the results
@@ -23,7 +24,6 @@ def executeQuery(graph: Graph, query: str) -> dict:
     json_result = reformatResultIntoSPARQLJson(result)
     # unregister the ASK knowledge interaction for the knowledge base    
     return json_result
-
 
 def reformatResultIntoSPARQLJson(result:dict) -> dict:
     json_result = {}

@@ -6,13 +6,14 @@
 import os
 import json
 import logging
+import logging_config as lc
 
 ####################
 # ENABLING LOGGING #
 ####################
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger.setLevel(lc.LOG_LEVEL)
 
 ######################################
 # ENV VARS AND GENERIC START-UP CODE #

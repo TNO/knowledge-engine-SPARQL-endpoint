@@ -5,6 +5,7 @@ import string
 import pprint
 import requests
 import logging
+import logging_config as lc
 
 # graph imports
 from rdflib.plugins.sparql.parser import parseQuery
@@ -16,9 +17,6 @@ from rdflib.exceptions import ParserError
 import rdflib
 from rdflib.util import from_n3
 from rdflib import RDF, Graph, Namespace, URIRef, Literal
-from rdflib.namespace import NamespaceManager
-
-nm = NamespaceManager(Graph())
 
 # import other py's from this repository
 import knowledge_network
@@ -29,20 +27,7 @@ import knowledge_network
 ####################
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-#logging.basicConfig(level=logging.DEBUG)
-
-def showPattern(triples: list, type: str):
-    nm.bind("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-    nm.bind("c2", "https://www.tno.nl/defense/ontology/c2/")
-    pattern = ""
-    for triple in triples:
-        bound_triple = "    "
-        for element in triple:
-            bound_triple += element.n3(namespace_manager = nm) + " "
-        bound_triple += "\n"
-        pattern += bound_triple
-    logger.info(f"Derived the following {type} graph pattern from the query:\n{pattern}")
+logger.setLevel(lc.LOG_LEVEL)
 
 
 ################################
@@ -57,16 +42,21 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
     # then determine whether the query is a SELECT query, because we only accept those!
     if not str(algebra).startswith("SelectQuery"):
         raise Exception(f"Only SELECT queries are supported!")
+    try:
+        addNamespaces(query)
+    except Exception as e:
+        logger.warning("Could not retrieve prefixes, defaulting to using complete URIs!")
+        #raise Exception(f"Could not retrieve prefixes, {e}")
     # get the main graph pattern and possible optional graph patterns from the algebra
     try:
         main_graph_pattern = []
         optional_graph_patterns = []
         main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p']['p'], main_graph_pattern, optional_graph_patterns)
     except Exception as e:
-        raise Exception(e)
-    showPattern(main_graph_pattern, "main")
+        raise Exception(f"Could not derive graph pattern, {e}")
+    lc.showPattern(main_graph_pattern, "main")
     for p in optional_graph_patterns:
-        showPattern(p, "optional")
+        lc.showPattern(p, "optional")
     logger.info('Main graph pattern and optional graph patterns are derived')
     # search bindings for the graph patterns in the knowledge network and build a local graph of them
     try:
@@ -132,4 +122,3 @@ def buildGraphFromTriplesAndBindings(graph: Graph, triples: list, bindings: list
                     bound_triple += (element,)
             graph.add(bound_triple)
     return graph
-

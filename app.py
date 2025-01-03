@@ -1,7 +1,8 @@
 # basic imports
 import os
-import logging
 import json
+import logging
+import logging_config as lc
 
 # api imports
 from contextlib import asynccontextmanager
@@ -22,11 +23,12 @@ import ttp_client
 ####################
 
 logger = logging.getLogger(__name__)
-#LOG_LEVEL = os.getenv("LOG_LEVEL")
+#LOG_LEVEL = lc.LOG_LEVEL
 #if LOG_LEVEL == "DEBUG":
-#    logger.setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
+logger.setLevel(lc.LOG_LEVEL)
+#logging.basicConfig(level=logging.DEBUG)
 #logger.info(f"log level is {LOG_LEVEL}")
+
 
 ####################
 # ENVIRONMENT VARS #
