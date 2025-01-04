@@ -2,7 +2,7 @@
 
 The Knowledge Engine SPARQL Endpoint provides an endpoint of a knowledge network that allows SPARQL queries to be fired on the knowledge network. The endpoint provides a single route, named `/query/`, that accepts a string containing a SPARQL query that meets the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/).
 
-NOTE!: In the current version only SPARQL SELECT queries are accepted that have a basic graph pattern in the WHERE clause. In addition, a FILTER construct can be present as well. Other constructs will be handled in future versions of the endpoint.
+NOTE!: In the current version only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. Other constructs will be handled in future versions of the endpoint.
 
 ### Token enabled
 By default, the endpoint is unsecured, so anyone can call the `/query/` route and get an answer. To provide a more secure option, the endpoint can be made `token_enabled`. This enables the support of trusted authentication of multiple, different requesters that are securely identified with secret tokens issued by a trusted third party.
