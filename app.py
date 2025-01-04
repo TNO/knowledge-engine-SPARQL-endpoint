@@ -24,6 +24,7 @@ import ttp_client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(lc.LOG_LEVEL)
+logger.info(f"LOG_LEVEL is set to {logging.getLevelName(logger.level)}")
 
 
 ####################
@@ -36,7 +37,7 @@ if "ENABLE_REASONER" in os.environ:
     ENABLE_REASONER = os.getenv("ENABLE_REASONER")
 else:
     ENABLE_REASONER = False    
-logger.info(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
+logger.debug(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")

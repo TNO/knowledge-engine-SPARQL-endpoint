@@ -1,19 +1,18 @@
+import os
 import logging
 from rdflib.namespace import NamespaceManager
 from rdflib import Graph
-
-#####################
-# SET LOGGING LEVEL #
-#####################
-
-LOG_LEVEL = logging.INFO
 
 ####################
 # ENABLING LOGGING #
 ####################
 
 logger = logging.getLogger(__name__)
-logger.setLevel(LOG_LEVEL)
+if "LOG_LEVEL" in os.environ:
+    logger.setLevel(getattr(logging, os.getenv("LOG_LEVEL")))
+else:
+    logger.setLevel(getattr(logging, "INFO"))
+LOG_LEVEL = logger.level
 
 #############################
 # LOGGING SUPPORT FUNCTIONS #
