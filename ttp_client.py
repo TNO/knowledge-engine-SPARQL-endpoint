@@ -6,13 +6,14 @@
 import os
 import json
 import logging
+import logging_config as lc
 
 ####################
 # ENABLING LOGGING #
 ####################
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger.setLevel(lc.LOG_LEVEL)
 
 ######################################
 # ENV VARS AND GENERIC START-UP CODE #
@@ -31,7 +32,6 @@ else: # no token_enabled flag, so set the flag to false
     raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 
 if TOKEN_ENABLED:
-    logger.info("token enabled!")
     if "TOKENS_FILE_PATH" in os.environ:
         TOKENS_FILE_PATH = os.getenv("TOKENS_FILE_PATH")
         if TOKENS_FILE_PATH == "":

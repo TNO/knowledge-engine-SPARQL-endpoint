@@ -41,20 +41,24 @@ services:
         }
       GRAPH_PATTERN: |
         ?att rdf:type c2:CyberAttack .
-        ?att c2:isTargetedTowards ?struc . 
-        ?struc rdf:type c2:Structure .
-        ?struc c2:hasName ?name .
+        ?att c2:hasOccurredAt ?datetime .
+        ?att c2:isTargetedTowards ?struc .
       KB_DATA: |
         [
           {
             "att": "<https://www.tno.nl/defense/data/c2/cyberattack-1>",
             "struc": "<https://www.tno.nl/defense/ontology/c2/energy-system-Lithuania>",
-            "name": "\"Energy-system-Lithuania\"^^xsd:string"            
+            "datetime": "\"2024-12-25T09:00:00\"^^xsd:dateTime"
           },
           {
             "att": "<https://www.tno.nl/defense/data/c2/cyberattack-2>",
             "struc": "<https://www.tno.nl/defense/ontology/c2/energy-system-Latvia>",
-            "name": "\"Energy-system-Latvia\"^^xsd:string"
+            "datetime": "\"2024-12-25T09:00:00\"^^xsd:dateTime"
+          },
+          {
+            "att": "<https://www.tno.nl/defense/data/c2/cyberattack-3>",
+            "struc": "<https://www.tno.nl/defense/ontology/c2/gas-provider-Lithuania>",
+            "datetime": "\"2024-12-25T09:00:00\"^^xsd:dateTime"
           }
         ]
   kb2:
@@ -68,14 +72,44 @@ services:
           "c2": "https://www.tno.nl/defense/ontology/c2/"
         }
       GRAPH_PATTERN: |
-        ?att rdf:type c2:CyberAttack .
-        ?att c2:isTargetedTowards ?struc . 
         ?struc rdf:type c2:Structure .
+        ?struc c2:hasName ?name .
+        ?struc c2:isLocatedAt ?area .
       KB_DATA: |
         [
           {
-            "att": "<https://www.tno.nl/defense/data/c2/cyberattack-3>",
-            "struc": "<https://www.tno.nl/defense/ontology/c2/gas-provider-Lithuania>"
+            "struc": "<https://www.tno.nl/defense/ontology/c2/energy-system-Lithuania>",
+            "name": "\"Energy-system-Lithuania\"^^xsd:string",
+            "area": "<https://www.tno.nl/defense/ontology/c2/LithuaniaCountry>"
+          },
+          {
+            "struc": "<https://www.tno.nl/defense/ontology/c2/energy-system-Latvia>",
+            "name": "\"Energy-system-Latvia\"^^xsd:string",
+            "area": "<https://www.tno.nl/defense/ontology/c2/LatviaCountry>"
+          }
+        ]
+  kb3:
+    build: ./answering_kb
+    environment:
+      KE_URL: http://runtime-1:8280/rest
+      KB_ID: http://example.org/kb3
+      PREFIXES: |
+        {
+          "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+          "c2": "https://www.tno.nl/defense/ontology/c2/"
+        }
+      GRAPH_PATTERN: |
+        ?area rdf:type c2:Area .
+        ?area c2:hasName ?name . 
+      KB_DATA: |
+        [
+          {
+            "area": "<https://www.tno.nl/defense/ontology/c2/LithuaniaCountry>",
+            "name": "\"Lithuania\"^^xsd:string"
+          },
+          {
+            "area": "<https://www.tno.nl/defense/ontology/c2/LatviaCountry>",
+            "name": "\"Latvia\"^^xsd:string"
           }
         ]
   answer-kb:
