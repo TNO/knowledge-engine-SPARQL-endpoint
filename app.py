@@ -37,7 +37,7 @@ if "ENABLE_REASONER" in os.environ:
     ENABLE_REASONER = os.getenv("ENABLE_REASONER")
 else:
     ENABLE_REASONER = False    
-logger.debug(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
+logger.info(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
