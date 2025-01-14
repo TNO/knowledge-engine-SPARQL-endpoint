@@ -23,6 +23,8 @@ from knowledge_mapper.tke_exceptions import UnexpectedHttpResponseError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(lc.LOG_LEVEL)
+logging.basicConfig(level=logging.INFO)
+
 
 ####################
 # ENVIRONMENT VARS #
@@ -91,20 +93,21 @@ def create_knowledge_base(kb_id: str) -> KnowledgeBase:
 
 
 # Params => IN: req_kb_id, pattern, OUT: answer
-def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list:
+def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, gaps_enabled: bool) -> list:
     req_kb_id = KNOWLEDGE_BASE_ID_PREFIX+requester_id
     # get the requesters' knowledge base
     requester_kb = knowledge_bases[req_kb_id]
     # generate an ASK knowledge interaction from the triples
     ki = getKnowledgeInteractionFromTriples(graph_pattern)
-    logger.debug(f'Knowledge interaction derived from triples is: {ki}')
+    #logger.debug(f'Knowledge interaction derived from triples is: {ki}')
     # build a registration request for the ASK knowledge interaction
-    req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])
+    req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"],knowledge_gaps_enabled=gaps_enabled)
+    logger.debug(f'Knowledge interaction registration request is {req}')
     # register the ASK knowledge interaction for the knowledge base
     registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
     # call the knowledge interaction without any bindings
     answer = registered_ki.ask([{}])
-    logger.debug(f'Answer for the knowledge network is: {answer}')
+    #logger.debug(f'Answer from the knowledge network is: {answer}')
     # unregister the ASK knowledge interaction for the knowledge base
     unregisterKnowledgeInteraction(req_kb_id, registered_ki.id)
     return answer
@@ -113,10 +116,11 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list
 def getKnowledgeInteractionFromTriples(triples: list) -> dict:
     knowledge_interaction = {
       "name": "sparql-query-ask-"+str(uuid.uuid1()),
-      "type": "ask"
+      #"type": "ask",
+      #"knowledge_gaps_enabled": "true"
     }
     # get variables and pattern from the triples
-    knowledge_interaction["vars"] = getVarsFromTriples(triples)
+    #knowledge_interaction["vars"] = getVarsFromTriples(triples)
     knowledge_interaction["pattern"] = convertTriplesToPattern(triples)
     return knowledge_interaction
 
@@ -169,12 +173,12 @@ def convertTriplesToPattern(triples: list) -> str:
     return pattern
 
 
-def getVarsFromTriples(triples: list) -> list:
-    vars = []
-    for triple in triples:
-        for element in triple:
-            if isinstance(element,rdflib.term.Variable):
-                if str(element) not in vars:
-                    vars.append(str(element))
-    return vars
+#def getVarsFromTriples(triples: list) -> list:
+ #   vars = []
+  #  for triple in triples:
+   #     for element in triple:
+    #        if isinstance(element,rdflib.term.Variable):
+     #           if str(element) not in vars:
+      #              vars.append(str(element))
+    #return vars
 
