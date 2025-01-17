@@ -261,7 +261,7 @@ def handle_query(params, gaps_enabled) -> dict:
     try:
         result = local_query_executor.executeQuery(graph, query)
         if gaps_enabled:
-            result['gaps'] = knowledge_gaps
+            result['knowledge_gaps'] = knowledge_gaps
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f"An unexpected error occurred: {e}")

@@ -55,6 +55,9 @@ try:
 except Exception as e:
     logger.error(f"Please check whether the knowledge network is up and running at {KNOWLEDGE_ENGINE_URL}")
 
+# TODO: add a dummy KB and delete it again to start the KE runtime
+
+
 # start an empty dictionary with a mapping between requester_ids and knowledge bases
 knowledge_bases = {}
 
@@ -99,7 +102,6 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, gaps_en
     requester_kb = knowledge_bases[req_kb_id]
     # generate an ASK knowledge interaction from the triples
     ki = getKnowledgeInteractionFromTriples(graph_pattern)
-    #logger.debug(f'Knowledge interaction derived from triples is: {ki}')
     # build a registration request for the ASK knowledge interaction
     req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"],knowledge_gaps_enabled=gaps_enabled)
     logger.debug(f'Knowledge interaction registration request is {req}')
@@ -107,7 +109,6 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, gaps_en
     registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
     # call the knowledge interaction without any bindings
     answer = registered_ki.ask([{}])
-    #logger.debug(f'Answer from the knowledge network is: {answer}')
     # unregister the ASK knowledge interaction for the knowledge base
     unregisterKnowledgeInteraction(req_kb_id, registered_ki.id)
     return answer
@@ -116,11 +117,7 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, gaps_en
 def getKnowledgeInteractionFromTriples(triples: list) -> dict:
     knowledge_interaction = {
       "name": "sparql-query-ask-"+str(uuid.uuid1()),
-      #"type": "ask",
-      #"knowledge_gaps_enabled": "true"
     }
-    # get variables and pattern from the triples
-    #knowledge_interaction["vars"] = getVarsFromTriples(triples)
     knowledge_interaction["pattern"] = convertTriplesToPattern(triples)
     return knowledge_interaction
 
@@ -171,14 +168,4 @@ def convertTriplesToPattern(triples: list) -> str:
             pattern = " ".join([pattern,t])
     
     return pattern
-
-
-#def getVarsFromTriples(triples: list) -> list:
- #   vars = []
-  #  for triple in triples:
-   #     for element in triple:
-    #        if isinstance(element,rdflib.term.Variable):
-     #           if str(element) not in vars:
-      #              vars.append(str(element))
-    #return vars
 

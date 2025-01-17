@@ -46,7 +46,6 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         lc.addNamespaces(query)
     except Exception as e:
         logger.warning("Could not retrieve prefixes, defaulting to using complete URIs!")
-        #raise Exception(f"Could not retrieve prefixes, {e}")
     # get the main graph pattern and possible optional graph patterns from the algebra
     try:
         main_graph_pattern = []
@@ -65,10 +64,11 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id,main_graph_pattern,gaps_enabled)
         logger.debug(f'Received answer from the knowledge network: {answer}')
         # if gaps_enabled only the knowledge gaps of the main graph pattern will be returned
-        if gaps_enabled:
-            knowledge_gaps = answer['knowledgeGaps']
-        else: # an empty knowledge gaps set will be returned
-            knowledge_gaps = []
+        knowledge_gaps = []
+        if gaps_enabled:  
+            pattern = [i.replace(" .","") for i in knowledge_network.convertTriplesToPattern(main_graph_pattern).split(' . ')]
+            knowledge_gap = {"pattern": pattern, "gaps": answer['knowledgeGaps']}
+            knowledge_gaps.append(knowledge_gap)
         # extend the graph with the triples and values in the bindings
         graph = buildGraphFromTriplesAndBindings(graph, main_graph_pattern, answer["bindingSet"])
         # second, loop over all optional graph patterns and add the bindings to the graph
