@@ -37,7 +37,7 @@ SPARQL_ENDPOINT_NAME = os.getenv("SPARQL_ENDPOINT_NAME","Knowledge Engine")
 if "ENABLE_REASONER" in os.environ:
     ENABLE_REASONER = os.getenv("ENABLE_REASONER")
 else:
-    ENABLE_REASONER = False    
+    ENABLE_REASONER = False
 logger.info(f'ENABLE_REASONER is set to {ENABLE_REASONER}')
 
 if "TOKEN_ENABLED" in os.environ:
@@ -50,7 +50,7 @@ if "TOKEN_ENABLED" in os.environ:
         case _:
             raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 else: # no token_enabled flag, so set the flag to false
-    raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
+    TOKEN_ENABLED = False
 logger.info(f'TOKEN_ENABLED is set to {TOKEN_ENABLED}')
 
 try:
