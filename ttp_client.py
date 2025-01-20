@@ -29,7 +29,7 @@ if "TOKEN_ENABLED" in os.environ:
         case _:
             raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
 else: # no token_enabled flag, so set the flag to false
-    raise Exception("Missing TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
+    TOKEN_ENABLED = False
 
 if TOKEN_ENABLED:
     if "TOKENS_FILE_PATH" in os.environ:
