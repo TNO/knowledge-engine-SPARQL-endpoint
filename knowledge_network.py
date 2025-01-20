@@ -23,6 +23,8 @@ from knowledge_mapper.tke_exceptions import UnexpectedHttpResponseError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(lc.LOG_LEVEL)
+logging.basicConfig(level=logging.INFO)
+
 
 ####################
 # ENVIRONMENT VARS #
@@ -46,19 +48,37 @@ else:
 # GENERIC START-UP CODE #
 #########################
 
-# start a smart connector and connect it to the knowledge network
+# start a knowledge engine runtime and connect it to the knowledge network
 tke_client = TkeClient(KNOWLEDGE_ENGINE_URL)
 try:
     tke_client.connect()
 except Exception as e:
     logger.error(f"Please check whether the knowledge network is up and running at {KNOWLEDGE_ENGINE_URL}")
 
+# define a knowledge base creation function for the knowledge network
+def create_knowledge_base(kb_id: str) -> KnowledgeBase:
+    # register the SPARQL endpoint to the knowledge network as a new Knowledge Base for the requester
+    kb_name = "SPARQL endpoint "+kb_id
+    try:
+        kb = tke_client.register(KnowledgeBaseRegistrationRequest(id=kb_id, name=kb_name, description=""),
+                                 reregister = False)
+    except Exception as e:
+        raise Exception(f'Failed to register a knowledge base {kb_id} at the knowledge network: {e}')
+    # if kb is None, a knowledge base with this kb_id already exists
+    if kb == None:
+        raise Exception(f'Knowledge base with id {kb_id} already exists!')
+    return kb
+
+# add a dummy KB and delete it again to start the KE runtime
+dummy_kb = create_knowledge_base(KNOWLEDGE_BASE_ID_PREFIX+"dummy")
+dummy_kb.unregister()
+
 # start an empty dictionary with a mapping between requester_ids and knowledge bases
 knowledge_bases = {}
 
 
 ###########################
-#   MISSING KB FUNCTIONS  #
+#   NEEDED KB FUNCTIONS   #
 ###########################
 
 
@@ -74,37 +94,20 @@ def check_knowledge_base_existence(requester_id: str):
     else:
         logger.info(f"Knowledge Base for '{requester_id}' already created at the Knowledge Network")
         
-
-# Params => IN: kb_id, OUT: KnowledgeBase
-def create_knowledge_base(kb_id: str) -> KnowledgeBase:
-    # register the SPARQL endpoint to the knowledge network as a new Knowledge Base for the requester
-    kb_name = "SPARQL endpoint "+kb_id
-    try:
-        kb = tke_client.register(KnowledgeBaseRegistrationRequest(id=kb_id, name=kb_name, description=""),
-                                 reregister = False)
-    except Exception as e:
-        raise Exception(f'Failed to register a knowledge base {kb_id} at the knowledge network: {e}')
-    # if kb is None, a knowledge base with this kb_id already exists
-    if kb == None:
-        raise Exception(f'Knowledge base with id {kb_id} already exists!')
-    return kb
-
-
-# Params => IN: req_kb_id, pattern, OUT: answer
-def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list:
+        
+def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, gaps_enabled: bool) -> list:
     req_kb_id = KNOWLEDGE_BASE_ID_PREFIX+requester_id
     # get the requesters' knowledge base
     requester_kb = knowledge_bases[req_kb_id]
     # generate an ASK knowledge interaction from the triples
     ki = getKnowledgeInteractionFromTriples(graph_pattern)
-    logger.debug(f'Knowledge interaction derived from triples is: {ki}')
     # build a registration request for the ASK knowledge interaction
-    req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"])
+    req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"],knowledge_gaps_enabled=gaps_enabled)
+    logger.debug(f'Knowledge interaction registration request is {req}')
     # register the ASK knowledge interaction for the knowledge base
     registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
     # call the knowledge interaction without any bindings
     answer = registered_ki.ask([{}])
-    logger.debug(f'Answer for the knowledge network is: {answer}')
     # unregister the ASK knowledge interaction for the knowledge base
     unregisterKnowledgeInteraction(req_kb_id, registered_ki.id)
     return answer
@@ -113,10 +116,7 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list) -> list
 def getKnowledgeInteractionFromTriples(triples: list) -> dict:
     knowledge_interaction = {
       "name": "sparql-query-ask-"+str(uuid.uuid1()),
-      "type": "ask"
     }
-    # get variables and pattern from the triples
-    knowledge_interaction["vars"] = getVarsFromTriples(triples)
     knowledge_interaction["pattern"] = convertTriplesToPattern(triples)
     return knowledge_interaction
 
@@ -167,14 +167,4 @@ def convertTriplesToPattern(triples: list) -> str:
             pattern = " ".join([pattern,t])
     
     return pattern
-
-
-def getVarsFromTriples(triples: list) -> list:
-    vars = []
-    for triple in triples:
-        for element in triple:
-            if isinstance(element,rdflib.term.Variable):
-                if str(element) not in vars:
-                    vars.append(str(element))
-    return vars
 

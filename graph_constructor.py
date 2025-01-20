@@ -35,10 +35,12 @@ logger.setLevel(lc.LOG_LEVEL)
 ################################
 
 
-def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
+def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabled) -> tuple[Graph, list]:
+    
     # first get the algebra from the query
     algebra = translateQuery(parseQuery(query)).algebra
     logger.debug(f"Algebra of the query is: {algebra}")
+    
     # then determine whether the query is a SELECT query, because we only accept those!
     if not str(algebra).startswith("SelectQuery"):
         raise Exception(f"Only SELECT queries are supported!")
@@ -46,7 +48,7 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
         lc.addNamespaces(query)
     except Exception as e:
         logger.warning("Could not retrieve prefixes, defaulting to using complete URIs!")
-        #raise Exception(f"Could not retrieve prefixes, {e}")
+        
     # get the main graph pattern and possible optional graph patterns from the algebra
     try:
         main_graph_pattern = []
@@ -57,27 +59,40 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str) -> Graph:
     lc.showPattern(main_graph_pattern, "main")
     for p in optional_graph_patterns:
         lc.showPattern(p, "optional")
+        
     # search bindings for the graph patterns in the knowledge network and build a local graph of them
+    graph = Graph()
     try:
-        graph = Graph()
-        logger.info('Main graph pattern is being asked to the knowledge network!')
+        logger.info('Main graph pattern is being asked from the knowledge network!')
+        
         # first request main graph pattern from knowledge network
-        answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id,main_graph_pattern)
-        logger.debug(f'Received answer: {answer["bindingSet"]}')
+        answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id,main_graph_pattern,gaps_enabled)
+        logger.debug(f'Received answer from the knowledge network: {answer}')
+        
+        # if gaps_enabled only the knowledge gaps of the main graph pattern will be returned
+        knowledge_gaps = []
+        #if gaps_enabled:
+        if gaps_enabled and answer['knowledgeGaps'] != []:
+            pattern = [i.replace(" .","") for i in knowledge_network.convertTriplesToPattern(main_graph_pattern).split(' . ')]
+            knowledge_gap = {"pattern": pattern, "gaps": answer['knowledgeGaps']}
+            knowledge_gaps.append(knowledge_gap)
+            
         # extend the graph with the triples and values in the bindings
         graph = buildGraphFromTriplesAndBindings(graph, main_graph_pattern, answer["bindingSet"])
+        
         # second, loop over all optional graph patterns and add the bindings to the graph
-        logger.info('Optional graph patterns are being asked to the knowledge network!')
+        logger.info('Optional graph patterns are being asked from the knowledge network!')
         for pattern in optional_graph_patterns:
-            answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id, pattern)
-            logger.debug(f'Received answer: {answer["bindingSet"]}')
+            answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id, pattern,gaps_enabled)
+            logger.debug(f'Received answer from the knowledge network: {answer}')
             # extend the graph with the triples and values in the bindings
             graph = buildGraphFromTriplesAndBindings(graph, pattern, answer["bindingSet"])
+            
     except Exception as e:
         raise Exception(f"An error occurred when contacting the knowledge network: {e}")
     logger.info(f"Knowledge network successfully responded to all the ask patterns!")
 
-    return graph
+    return graph, knowledge_gaps
 
 
 def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_patterns) -> tuple[list, list]:
