@@ -58,14 +58,14 @@ try:
         queries = json.load(f)
         EXAMPLE_QUERY = queries['query']
 except:
-    EXAMPLE_QUERY = "SELECT * WHERE {?s ?p ?o}"
+    EXAMPLE_QUERY = "SELECT * WHERE {?event <https://example.org/hasOccurredAt> ?datetime}"
 OPENAPI_EXAMPLES = {
         "default": {
-            "description": "the default usage is to only provide a correct SPARQL query",
+            "description": "The default usage is to only provide a correct SPARQL query",
             "value": {"query": f"{EXAMPLE_QUERY}"}
             },
         "token_enabled": {
-            "description": "when tokens are enabled, a correct token needs to be provided",
+            "description": "When tokens are enabled, a correct token needs to be provided",
             "value": {"token": "1234", "query": f"{EXAMPLE_QUERY}"}
             }
     }
@@ -151,33 +151,29 @@ async def root():
                        "application/json": {
                             "example": {
                                 "head": {
-                                    "vars": [ "s", "p", "o" ]
+                                    "vars": [ "event", "datetime" ]
                                 },
                                 "results": {
                                     "bindings": [
                                         {
-                                            "s": {
+                                            "event": {
                                                 "type": "uri",
-                                                "value": "https://example.org/subject"
+                                                "value": "https://example.org/FirstLandingOnTheMoon"
                                             },
-                                            "p": {
-                                                "type": "uri",
-                                                "value": "https://example.org/hasOccurredAt"
-                                            },
-                                            "o": {
+                                            "datetime": {
                                                 "type": "literal",
                                                 "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
-                                                "value": "2024-12-25T09:00:00"
+                                                "value": "1969-07-20T20:05:00Z"
                                             }
                                         }
                                     ]
                                 }
                             }
-                          }
-                      }
-                  }
-              }
-          )
+                        }
+                    }
+                }
+            }
+        )
 async def post(params: Annotated[
                             QueryInputParameters,
                             Body(openapi_examples=OPENAPI_EXAMPLES)
@@ -202,22 +198,29 @@ async def post(params: Annotated[
                        "application/json": {
                             "example": {
                                 "head": {
-                                    "vars": [ "s", "p", "o" ]
+                                    "vars": [ "event", "datetime" ]
                                 },
                                 "results": {
                                     "bindings": []
                                 },
-                                "gaps": [
-                                    [
-                                        "?s <https://example.org/hasOccurredAt> ?o"
-                                    ]
+                                "knowledge_gaps": [
+                                    {
+                                        "pattern": [
+                                            "?event <https://example.org/hasOccurredAt> ?datetime"
+                                        ],
+                                        "gaps": [
+                                            [
+                                                "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/MainHistoricEvents>"
+                                            ]
+                                        ]
+                                    }
                                 ]
                             }
-                          }
-                      }
-                  }
-              }
-          )
+                        }
+                    }
+                }
+            }
+        )
 async def post(params: Annotated[
                             QueryInputParameters,
                             Body(openapi_examples=OPENAPI_EXAMPLES)

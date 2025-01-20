@@ -1,73 +1,105 @@
 # Knowledge Engine SPARQL Endpoint
 
-The Knowledge Engine SPARQL Endpoint provides an endpoint of a knowledge network that allows SPARQL queries to be fired on the knowledge network. The endpoint provides a single route, named `/query/`, that accepts a string containing a SPARQL query that meets the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/).
+The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine).
 
-NOTE!: In the current version only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. Other constructs will be handled in future versions of the endpoint.
+IMPORTANT!
 
-### Token enabled
-By default, the endpoint is unsecured, so anyone can call the `/query/` route and get an answer. To provide a more secure option, the endpoint can be made `token_enabled`. This enables the support of trusted authentication of multiple, different requesters that are securely identified with secret tokens issued by a trusted third party.
+In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. Other constructs will be handled in future versions of the endpoint.
 
-In the current version, the trusted third party is implemented as a file that contains the mapping from tokens to requester identifiers. This file is named `tokens_to_requesters.json` and contains the mapping in a JSON format. The query provided to the route `/query/` must then be accompanied by one of the tokens in that file. The provided token will be validated and the requester's identifier will be retrieved from the `tokens_to_requesters.json` file. Subsequently, this requester's identifier will be used in the knowledge network for authorization purposes. An example of the structure of this file is given in the file `tokens_to_requesters.json.default`.
+## Configuration
 
-### Application specific documentation
-As the endpoint is implemented as a FastAPI, documentation of the available routes and their parameters are in the `/docs` extension of the endpoint. The `request body` of the `/query/` route provides some examples of queries that can be used to "try it out". By default the example query is `SELECT * WHERE {?s ?p ?o}`.
+The SPARQL endpoint has a basic configuration and additional configuration options.
 
-If the SPARQL endpoint is being deployed for a specific application, the example queries can also be made specific for this application. This can be done by providing a file named `example_query.json`. That file sould contain a single object with only a `query` field that contains the example query. For instance, for the heatpump application domain this file could look like:
+### Basic endpoint configuration (URL, IDs, port)
+
+The Knowledge Engine SPARQL Endpoint can be configured using a number of environment variables.
+
+Firstly, the knowledge network should be available via a RestAPI at a server plus port combination. The URL to the knowledge network RestAPI must be set in the mandatory environment variable KNOWLEDGE_ENGINE_URL.
+
+Secondly, upon startup of the endpoint and execution of SPARQL queries, the endpoint will register knowledge bases at the knowledge network that must be uniquely identified. To do so, the prefix for each knowledge base ID must be unique and set in the mandatory environment variable KNOWLEDGE_BASE_ID_PREFIX.
+
+Thirdly, the endpoint should be made available via a specific port at the server where it is deployed. The port number must be set in a mandatory environment variable PORT.
+
+Example values for these mandatory environment variables are:
+
+```
+KNOWLEDGE_ENGINE_URL=http://my-server-name:8280/rest
+KNOWLEDGE_BASE_ID_PREFIX=https://ke/sparql-endpoint/
+PORT=8000
+```
+
+### Optional additional configuration (tokens, name)
+
+On top of the mandatory basic endpoint configuration a few other environment variables can be used to enable additional functionality.
+
+Firstly, the knowledge engine contains a reasoner that enables combination of result bindings of different sources. Enabling this reasoner increases the possibilities to get a (complete) answer to the query. This can be done by setting the environment variable ENABLE_REASONER. This is a boolean variable that has either the value True of False. If it is not set, the default value is False, so reasoning is not enabled.
+
+Secondly, the endpoint is by default unsecured. To provide a more secure configuration, the endpoint can make use of tokens. This enables the support of trusted authentication of multiple, different requesters that are securely identified with secret tokens issued by a trusted third party. To enable this, the optional environment variable TOKEN_ENABLED can be set. This is a boolean variable that has either the value True of False. If it is not set, the default value is False, so no tokens need to be provided.
+
+Thirdly, in the current version, the trusted third party is implemented as a file, named `tokens_to_requesters.json`, that contains the mapping in a JSON format from tokens to requester identifiers. So, if TOKEN_ENABLED is set to True, the location of this file must be defined in the environment variable TOKENS_FILE_PATH, which is the path to the file. An example of the structure of this file is given in the file `tokens_to_requesters.json.default` in this folder. A snapshot of its contents looks like:
+
+```
+[
+  {
+    "requester": "requester1",
+    "token": "1234"
+  },
+  {
+    "requester": "requester2",
+    "token": "5678"
+  }
+]
+```
+
+Fourthly, as the Knowledge Engine SPARQL endpoint might be used in various different applications and domains, a name that is specific for the application or domain can be given in the environment variable SPARQL_ENDPOINT_NAME. The default value for this variable is "Knowledge Engine".
+
+Example values for these mandatory environment variables are:
+
+```
+ENABLE_REASONER=True
+TOKEN_ENABLED=True
+TOKENS_FILE_PATH=./tokens_to_requesters.json
+SPARQL_ENDPOINT_NAME="My cute"
+```
+
+Finally, if the SPARQL endpoint is being deployed for a specific application, specific example queries can be described in the endpoint documentation. This can be done by providing a file named `example_query.json`. That file should contain a single object with only a `query` field that contains the example query. For instance, for some application domain that is interested in which events have occurred at which date time this file could look like:
 
 ```{
-    "query": "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>    PREFIX om: <http://www.ontology-of-units-of-measure.org/resource/om-2/>    PREFIX hco: <https://www.tno.nl/building/ontology/heatpump-common-ontology#>    PREFIX saref: <https://saref.etsi.org/core/>    SELECT * WHERE {        ?heatpump rdf:type hco:Heatpump .        ?measurement rdf:type saref:Measurement .         ?measurement saref:measurementMadeBy ?heatpump .         ?measurement saref:relatesToProperty hco:roomTemperature .         ?measurement saref:isMeasuredIn om:degreeCelsius .         ?measurement saref:hasValue ?roomTemperature . }"
+    "query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }"
 }
 ```
 
-### CORS-enabled
-Furthermore, the endpoint is CORS-enabled, so it can be called for by any website as of now. Further limitations for this access needs to be added when necessary.
+## Deployment
 
+There are multiple ways to run the SPARQL endpoint.
 
-## Running the endpoint as a Docker image
-The Knowledge Engine SPARQL Endpoint is available as a Docker image in the Container Registry of the project on the Gitlab environment of TNO:
+### Running the endpoint in Python
 
-[knowledge-engine-sparql-endpoint/container_registry](https://ci.tno.nl/gitlab/tke/knowledge-engine-sparql-endpoint/container_registry/3409)
-
-All tagged versions of the endpoint can be found there. The latest version of the image of the endpoint is available with the highest tag number.
-
-The latest Docker image assumes the following is available in the environment.
-
-First, the endpoint requires the following environment variables:
-
-- KNOWLEDGE_ENGINE_URL: the URL of the Knowledge Network to which you want to fire your SPARQL query.
-- KNOWLEDGE_BASE_ID_PREFIX: the prefix for the ID of the Knowledge Base that will be registered at the Knowledge Network.
-- PORT: the number of the port via which you want to expose the SPARQL endpoint.
-- TOKEN_ENABLED: a boolean indicating whether tokens are supported.
-
-If TOKEN_ENABLED is True, the following environment variable is required as well:
-- TOKENS_FILE_PATH: the path to the file that contains the mapping from tokens to requester IDs.
-
-An example of the values for these environment variables is:
+The endpoint can be run in a terminal with the Python interpreter v3.11 or higher. Clone the repository on your own machine and go to the main directory of this repository containing the `app.py` file, which is the main Python file to start with. As described above, make sure that the environment variables are properly set and create a `token-to-requester.json` file if tokens are enabled. The sequence of Python commands to run the endpoint is as follows:
 
 ```
-KNOWLEDGE_ENGINE_URL=http://host.docker.internal:8280/rest
-KNOWLEDGE_BASE_ID_PREFIX=https://ke/sparql-endpoint/
-PORT=8000
-TOKEN_ENABLED=True
-TOKENS_FILE_PATH=./tokens_to_requesters.json
+pip install --upgrade pip
+pip install wheel
+pip install -r requirements.txt
+uvicorn app:app
 ```
+This will result in the endpoint running in your `localhost` at the port you have set in the environment variable. So, if your port is `8000`, the endpoint will run at `http://localhost:8000`.
 
-In addition, the following optional environment variable can be set.
+### Running the endpoint using an already generated Docker image
 
-- SPARQL_ENDPOINT_NAME: the name of the SPARQL endpoint that is specific for the application in which it is used. Default value is: Knowledge Engine
+Another way to run the endpoint is by using [Docker](https://www.docker.com). In the Container Registry of this repository, various tagged versions of a Docker image for the endpoint can be found. The latest version of the endpoint is available in the image with the highest tag number. These images have been generated using the `Dockerfile` available in this repository. By copying the image path and using it in a `Docker run` command, the endpoint can be deployed.
 
-```
-SPARQL_ENDPOINT_NAME=The SPARQL apostle
-```
+As Docker makes use of a `.env` file to define environment variables, make sure that this file exists in the root directory and contains correct values for the mandatory and possibly optional environment variables. An example of such a `.env` file can be found in this repository.
 
-When using docker-compose these environment variables can be made available via the .env file. An example of this file can be found here:
+This will result in the endpoint running in your `localhost` at the port you have set in the environment variable. So, if your port is `8000`, the endpoint will run at `http://localhost:8000`.
 
-`https://ci.tno.nl/gitlab/tke/knowledge-engine-sparql-endpoint/-/blob/main/.env`
+### Running the endpoint using docker-compose and Volumes
 
+Another way to run the endpoint is by using a `docker-compose.yml` file. This enables you to define a docker service and parameters for building an image, environment variables, ports, volumes etc. An example of such a file can be found in this repository.
 
-### Providing files via docker-compose Volumes
+IMPORTANT!
 
-The Docker images in the Container Registry do NOT contain the `.json` files `tokens_to_requesters.json` and `exampe_query.json`. These files should be available outside of the container and an external volume should be mapped to the `/app/` folder inside the container!! In a `docker-compose.yml` file this could look like this:
+The Docker images in the Container Registry do NOT contain the `.json` files `tokens_to_requesters.json` and `example_query.json`. These files should be available outside of the container and an external volume should be mapped to the `/app/` folder inside the container!! In a `docker-compose.yml` file this could look like this:
 
 ```
 volumes:
@@ -75,10 +107,9 @@ volumes:
   - ./tokens_to_requesters.json:/app/. 
 ```
 
+### Building the Docker image yourself
 
-## Building the Docker image yourself
-
-If you want to build the Docker image yourself use the following command in the directory in which the docker-compose.yml is located:
+If you want to build the Docker image for the SPARQL endpoint yourself use the following command in the directory in which the docker-compose.yml is located:
 
 `docker-compose build sparql-endpoint`
 
@@ -86,23 +117,54 @@ Once succeeded, make sure the .env file contains the correct environment variabl
 
 `docker-compose up -d sparql-endpoint`
 
-## What do you get once the endpoint is running?
+### CORS-enabled
 
-Once the endpoint is up and running, it will connect to the provided Knowledge Network and starts waiting for an incoming query.
+To be able to call the endpoint from another website, the endpoint is made CORS-enabled. In the current version, ANY website is allowed to call the endpoint. Further limitations for this access needs to be added when necessary.
 
-A query can be provided to the `/query/` route of the endpoint. This route is available at your server (or localhost) at the port you provided in the environment variable, e.g.
+## Endpoint routes and specification
+
+Once the endpoint is up and running, it will connect to the provided Knowledge Network and makes two routes available that start waiting for incoming queries.
+
+### Basic query route
+
+The first route is a basic query route named `/query/`. This route accepts a string containing a SPARQL1.1 query that meets the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/). It will process the query, fire it on the knowledge network and return the results that are compliant with the SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
+
+So, when the endpoint has been deployed on the localhost at port 8000, the route will be available at:
 
 `http://localhost:8000/query/`
 
-The query that is provided to the route should be made available in a JSON structure as follows:
+The query that is provided to the route should be made provided in a JSON structure as follows:
 
 `{"query": "<the query>"}`
 
 For example:
 
-`{"query": "SELECT * WHERE {?s ?p ?o}"}`
+`{"query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }" }`
 
-The result of the query will be returned as a SPARQL 1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
+The result of the query will be returned as a SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/). For instance, the result for a single binding for the query above looks like:
+
+	{
+	    "head": {
+	        "vars": [ "event", "datetime" ]
+	    },
+	    "results": {
+	        "bindings": [
+	            {
+	                "event": {
+	                    "type": "uri",
+	                    "value": "https://example.org/subject"
+	                },
+	                "datetime": {
+	                    "type": "literal",
+	                    "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+	                    "value": "1969-07-20T20:05:00Z"
+	                }
+	            }
+	        ]
+	    }
+	}
+
+#### Token enabled
 
 If tokens are enabled, the input JSON structure should be as follows:
 
@@ -118,10 +180,56 @@ For example:
 ```
 {
  "token": "1234",
- "query": "SELECT * WHERE {?s ?p ?o}"
+ "query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }"
 }
 ```
 
+The provided token will be validated and the requester's identifier will be retrieved from the `tokens_to_requesters.json` file. Subsequently, this requester's identifier will be used in the knowledge network for authorization purposes.
+
+### Knowledge gaps query route
+
+The second route is named `/query-with-gaps/` and is meant to deal with queries for which no result bindings can be found in the knowledge network. This route also accepts a SPARQL1.1 query, but is meant to act on a knowledge network that is able to return knowledge gaps. A knowledge gap is a graph pattern that need to be provided by the knowledge network to be able to answer the query. 
+
+So, when the endpoint has been deployed on the localhost at port 8000, the route will be available at:
+
+`http://localhost:8000/query-with-gaps/`
+
+The query that is provided to the route should be made provided in a JSON structure as follows:
+
+`{"query": "<the query>"}`
+
+For example:
+
+`{"query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }" }`
+
+The result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) a pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. For instance, the result for the query above with no bindings but with knowledge gaps can look like:
+
+	{
+	    "head": {
+	        "vars": [ "event", "datetime" ]
+	    },
+	    "results": {
+	        "bindings": []
+	    },
+	    "knowledge_gaps": [
+	        {
+	            "pattern": [
+	                "?event <https://example.org/hasOccurredAt> ?datetime"
+	            ],
+	            "gaps": [
+	                [
+	                    "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/MainHistoricEvents>"
+	                ]
+	            ]
+	        }
+	    ]
+	}
+
+If tokens are enabled, the input JSON structure is similar as for the basic `/query/` route.
+
+## API Documentation
+
+As the endpoint is implemented as a FastAPI, more documentation of the available routes and their parameters can be found in the `/docs` extension of the endpoint. The `request body` of the `/query/` route provides some examples of queries that can be used to "try it out". By default the example query is `SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }`.
 
 ## Tests
 
