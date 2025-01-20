@@ -257,7 +257,7 @@ def handle_query(params, gaps_enabled) -> dict:
         graph, knowledge_gaps = graph_constructor.constructGraphFromKnowledgeNetwork(query, requester_id, gaps_enabled)
     except Exception as e:
         raise HTTPException(status_code=400,
-                            detail=f"Bad request, malformed query syntax: {e}")
+                            detail=f"Query could not be processed by the endpoint: {e}")
     logger.info(f"Successfully constructed a graph from the knowledge network!")
 
     # execute the query on the graph with the retrieved bindings
@@ -267,7 +267,7 @@ def handle_query(params, gaps_enabled) -> dict:
             result['knowledge_gaps'] = knowledge_gaps
     except Exception as e:
         raise HTTPException(status_code=500,
-                            detail=f"An unexpected error occurred: {e}")
+                            detail=f"Query could not be executed on the local graph: {e}")
     logger.info(f"SPARQL Endpoint generated the following result to the query {result}!")
 
     return result

@@ -62,25 +62,30 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         
     # search bindings for the graph patterns in the knowledge network and build a local graph of them
     graph = Graph()
+    # first request main graph pattern from knowledge network
     try:
         logger.info('Main graph pattern is being asked from the knowledge network!')
-        
-        # first request main graph pattern from knowledge network
         answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id,main_graph_pattern,gaps_enabled)
-        logger.debug(f'Received answer from the knowledge network: {answer}')
-        
-        # if gaps_enabled only the knowledge gaps of the main graph pattern will be returned
-        knowledge_gaps = []
-        #if gaps_enabled:
-        if gaps_enabled and answer['knowledgeGaps'] != []:
-            pattern = [i.replace(" .","") for i in knowledge_network.convertTriplesToPattern(main_graph_pattern).split(' . ')]
-            knowledge_gap = {"pattern": pattern, "gaps": answer['knowledgeGaps']}
-            knowledge_gaps.append(knowledge_gap)
-            
+        logger.debug(f'Received answer from the knowledge network: {answer}')            
         # extend the graph with the triples and values in the bindings
         graph = buildGraphFromTriplesAndBindings(graph, main_graph_pattern, answer["bindingSet"])
+    except Exception as e:
+        raise Exception(f"An error occurred when contacting the knowledge network: {e}")
+    logger.info(f"Knowledge network successfully responded to the main ask pattern!")
         
-        # second, loop over all optional graph patterns and add the bindings to the graph
+    # if gaps_enabled only the knowledge gaps of the main graph pattern will be returned, otherwise return empty gaps
+    knowledge_gaps = []
+    if gaps_enabled:
+        if "knowledgeGaps" in answer.keys():
+            if answer['knowledgeGaps'] != []:
+                pattern = [i.replace(" .","") for i in knowledge_network.convertTriplesToPattern(main_graph_pattern).split(' . ')]
+                knowledge_gap = {"pattern": pattern, "gaps": answer['knowledgeGaps']}
+                knowledge_gaps.append(knowledge_gap)
+        else: # knowledgeGaps is not in answer
+            raise Exception("The knowledge network should support and return knowledge gaps!")
+
+    # second, loop over all optional graph patterns and add the bindings to the graph
+    try:
         logger.info('Optional graph patterns are being asked from the knowledge network!')
         for pattern in optional_graph_patterns:
             answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id, pattern,gaps_enabled)
