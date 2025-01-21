@@ -1,3 +1,92 @@
+    
+from src.model_schemas import *
+from src.recommender import *
+
+def test_all_dats_not_empty():
+    response = client.get("/dats/")
+    assert response.status_code == 200
+
+    graph = response.json()
+    assert graph['@graph']
+
+
+
+def test_recommend_random():
+    response = client.get("/recommend_random/")
+    assert response.status_code == 200
+
+    dat = response.json()
+    assert '@id' in dat
+    assert '@type' in dat
+    assert dat['@type'] == "qcsm:DigitalAgriculturalTechnology"
+
+
+def test_order_three_dat_recommendation_list_alphabetically_on_label():
+    recommender = Recommender("")
+    ordering_type = OrderingType.LABEL_ALPHABETICALLY
+    mock_recommendation_list = RecommendationList(items=[DATmain(ID='ID', title='B', visible=True, info=DATinfo()),
+                                                         DATmain(ID='ID', title='C', visible=True, info=DATinfo()),
+                                                         DATmain(ID='ID', title='A', visible=True, info=DATinfo())])
+    
+    recommender._create_ordering(mock_recommendation_list, ordering_type)
+
+    assert mock_recommendation_list.items[0].title == 'A'
+    assert mock_recommendation_list.items[1].title == 'B'
+    assert mock_recommendation_list.items[2].title == 'C'
+
+def test_order_three_dat_recommendation_list_reverse_alphabetically_on_label():
+    recommender = Recommender("")
+    ordering_type = OrderingType.LABEL_ALPHABETICALLY_REVERSE
+    mock_recommendation_list = RecommendationList(items=[DATmain(ID='ID', title='B', visible=True, info=DATinfo()),
+                                                         DATmain(ID='ID', title='C', visible=True, info=DATinfo()),
+                                                         DATmain(ID='ID', title='A', visible=True, info=DATinfo())])
+    
+    recommender._create_ordering(mock_recommendation_list, ordering_type)
+
+    assert mock_recommendation_list.items[0].title == 'C'
+    assert mock_recommendation_list.items[1].title == 'B'
+    assert mock_recommendation_list.items[2].title == 'A'
+
+def test_order_three_dat_recommendation_list_custom_order():
+    recommender = Recommender("")
+    ordering_type = OrderingType.CUSTOM
+    ordering = [1, 2, 0]
+    mock_recommendation_list = RecommendationList(items=[DATmain(ID='ID_B', title='title', visible=True, info=DATinfo()),
+                                                         DATmain(ID='ID_C', title='title', visible=True, info=DATinfo()),
+                                                         DATmain(ID='ID_A', title='title', visible=True, info=DATinfo())])
+    
+    recommender._create_ordering(mock_recommendation_list, ordering_type, ordering)
+
+    assert mock_recommendation_list.items[0].ID == 'ID_A'
+    assert mock_recommendation_list.items[1].ID == 'ID_B'
+    assert mock_recommendation_list.items[2].ID == 'ID_C'
+
+
+
+
+
+def test_apply_profile_output():
+    mock_farmer_profile = FarmerProfileInfo(farmType=FarmerProfileEntry(value="arable", requireExactMatch=True),
+                                            language=FarmerProfileEntry(value="Greek", requireExactMatch=True), 
+                                            country=None,
+                                            parcelSize=FarmerProfileEntry(value="64ha", requireExactMatch=True))
+    mock_selected_options = SelectedOptions()
+    test = RecommendationList(items=[DATmain(ID='ID', title='title', visible=True, info=DATinfo())])
+
+    post_data = json.dumps({"farmer_profile": mock_farmer_profile.model_dump(), "selected_options": mock_selected_options.model_dump()})
+
+    response = client.post("/apply_farmer_profile/", data=post_data)
+    assert response.status_code == 200
+
+
+
+
+
+
+
+
+
+
 import sys, os, pprint
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
