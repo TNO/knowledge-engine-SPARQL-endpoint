@@ -85,22 +85,6 @@ def test_apply_profile_output():
 
 
 
-
-
-import sys, os, pprint
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# Get the parent directory by going one level up
-parent_dir = os.path.dirname(current_dir)
- 
-#print(parent_dir+"/tests")
-# Add the parent directory to sys.path
-sys.path.append(parent_dir)
-sys.path.append(parent_dir+"/tests")
-
-#print(sys.path)
-import app
-
 # basic query without any constructs => create graph pattern with all triples
 query1 = """
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
