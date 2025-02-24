@@ -147,19 +147,13 @@ def convertTriplesToPattern(triples: list) -> str:
     pattern = ""
     for triple in triples:
         t = ""        
-        if isinstance(triple[0],rdflib.term.Variable):
-            t = t+"?"+triple[0]
-
-        if isinstance(triple[1],rdflib.term.Variable):
-            t = t+" ?"+triple[1]
-        elif isinstance(triple[1],rdflib.term.URIRef):
-            t = t+" <"+str(triple[1])+">"
-
-        if isinstance(triple[2],rdflib.term.Variable):
-            t = t+" ?"+triple[2]
-        elif isinstance(triple[2],rdflib.term.URIRef):
-            t = t+" <"+str(triple[2])+">"
-        
+        for x in range(3):
+            if isinstance(triple[x],rdflib.term.Variable):
+                t = t+"?"+triple[x]
+            elif isinstance(triple[x],rdflib.term.URIRef):
+                t = t+" <"+str(triple[x])+">"
+            elif isinstance(triple[x],rdflib.term.Literal):
+                t = t+" '"+str(triple[x])+"'"
         t = t+" ."
         if pattern == "":
             pattern = t
