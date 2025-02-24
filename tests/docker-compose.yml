@@ -10,6 +10,8 @@ services:
       KE_RUNTIME_PORT: 8081
       KE_RUNTIME_EXPOSED_URL: http://kbs-runtime:8081
       KD_URL: http://kd:8282
+    ports:
+      - "8280:8280"
 
   # Two KBs are added: one to answer relations and one to react to input and provide relations
   relation-provider-kb:
