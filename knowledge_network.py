@@ -146,14 +146,16 @@ def unregisterKnowledgeBases():
 def convertTriplesToPattern(triples: list) -> str:
     pattern = ""
     for triple in triples:
-        t = ""        
+        t = ""
         for x in range(3):
+            if x != 0:
+                t = t+" "
             if isinstance(triple[x],rdflib.term.Variable):
                 t = t+"?"+triple[x]
             elif isinstance(triple[x],rdflib.term.URIRef):
-                t = t+" <"+str(triple[x])+">"
+                t = t+"<"+str(triple[x])+">"
             elif isinstance(triple[x],rdflib.term.Literal):
-                t = t+" '"+str(triple[x])+"'"
+                t = t+"'"+str(triple[x])+"'"
         t = t+" ."
         if pattern == "":
             pattern = t
