@@ -9,8 +9,9 @@ import logging_config as lc
 
 # graph imports
 from rdflib.plugins.sparql.parser import parseQuery
-from rdflib.plugins.sparql.algebra import translateQuery
-from rdflib.plugins.sparql.algebra import pprintAlgebra
+from rdflib.plugins.sparql.sparql import Prologue
+from rdflib.namespace import NamespaceManager
+from rdflib.plugins.sparql.algebra import translatePrologue, translatePName, translateQuery, traverse, functools
 from rdflib.exceptions import ParserError
 
 # graph imports
@@ -34,20 +35,33 @@ logger.setLevel(lc.LOG_LEVEL)
 # PATTERN EXTRACTION FUNCTIONS #
 ################################
 
+class PrologueNew(Prologue):
+    
+    def __init__(self) -> None:
+        super().__init__()
+        # set the namespace manager to only hold core prefixes
+        self.namespace_manager = NamespaceManager(Graph(),bind_namespaces="core")
+
 
 def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabled) -> tuple[Graph, list]:
     
-    # first get the algebra from the query
-    algebra = translateQuery(parseQuery(query)).algebra
-    logger.debug(f"Algebra of the query is: {algebra}")
-    
+    # first parse the query
+    parsed_query = parseQuery(query)
+
     # then determine whether the query is a SELECT query, because we only accept those!
-    if not str(algebra).startswith("SelectQuery"):
+    if not parsed_query[1].name == "SelectQuery":
         raise Exception(f"Only SELECT queries are supported!")
-    try:
-        lc.addNamespaces(query)
-    except Exception as e:
-        logger.warning("Could not retrieve prefixes, defaulting to using complete URIs!")
+    
+    # now, create a prologue that contains the namespaces used in the query
+    prologue_new = PrologueNew()
+    prologue = translatePrologue(parsed_query[0], None, None, prologue_new)
+
+    # then, check whether all prefixes in the query are defined in the prologue
+    traverse(parsed_query[1], visitPost=functools.partial(translatePName, prologue=prologue))
+
+    # third, get the algebra from the query
+    algebra = translateQuery(parsed_query).algebra
+    logger.debug(f"Algebra of the query is: {algebra}")
         
     # get the main graph pattern and possible optional graph patterns from the algebra
     try:
@@ -56,9 +70,10 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p']['p'], main_graph_pattern, optional_graph_patterns)
     except Exception as e:
         raise Exception(f"Could not derive graph pattern, {e}")
-    lc.showPattern(main_graph_pattern, "main")
+    logger.info(f"main graph pattern is: {main_graph_pattern}")
+    showPattern(main_graph_pattern, prologue.namespace_manager, "main")
     for p in optional_graph_patterns:
-        lc.showPattern(p, "optional")
+        showPattern(p, prologue.namespace_manager, "optional")
         
     # search bindings for the graph patterns in the knowledge network and build a local graph of them
     graph = Graph()
@@ -102,12 +117,13 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
 
 def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_patterns) -> tuple[list, list]:
     # collect the pattern of triples from the algebra
-    type = str(algebra).split("{")[0]
+    type = algebra.name
     logger.debug(f"Algebra is of type {type}")
+    
     match type:
-        case "BGP_BGP_":
+        case "BGP":
             main_graph_pattern = main_graph_pattern + algebra['triples']
-        case "Filter_Filter_":
+        case "Filter":
             if not str(algebra['expr']).startswith("Builtin"):
                 # it is a filter with a value for a variable, so this does not contain triples to be added to the graph pattern
                 logger.debug("Filter contains a restriction for the values of a variable")
@@ -115,11 +131,11 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
             else:
                 # it is either a filter_exists or a filter_not_exists
                 raise Exception(f"Unsupported expression {str(algebra['expr']).split('{')[0]} in construct type {type}. Please implement this!")
-        case "Join_Join_":
+        case "Join":
             # both parts should be added to the same main graph pattern
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p2'], main_graph_pattern, optional_graph_patterns)
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p1'], main_graph_pattern, optional_graph_patterns)            
-        case "LeftJoin_LeftJoin_":
+        case "LeftJoin":
             # part p1 should be added to the main graph pattern
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p1'], main_graph_pattern, optional_graph_patterns)
             # part p2 is an optional part which is BGP and its triples should be added as optional graph pattern
@@ -143,3 +159,17 @@ def buildGraphFromTriplesAndBindings(graph: Graph, triples: list, bindings: list
                     bound_triple += (element,)
             graph.add(bound_triple)
     return graph
+
+
+def showPattern(triples: list, nm: NamespaceManager, type: str):
+    pattern = ""
+    for triple in triples:
+        bound_triple = "    "
+        for element in triple:
+            #bound_triple += element.n3(namespace_manager = nm) + " "
+            bound_triple += element.n3(namespace_manager = nm) + " "
+        bound_triple += "\n"
+        pattern += bound_triple
+    logger.info(f"Derived the following {type} graph pattern from the query:\n{pattern}")
+
+
