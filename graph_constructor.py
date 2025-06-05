@@ -94,7 +94,9 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         if "knowledgeGaps" in answer.keys():
             if answer['knowledgeGaps'] != []:
                 pattern = [i.replace(" .","") for i in knowledge_network.convertTriplesToPattern(main_graph_pattern).split(' . ')]
-                knowledge_gap = {"pattern": pattern, "gaps": answer['knowledgeGaps']}
+                pattern_string = " . ".join(pattern)
+                logger.debug(f"Knowledge gap pattern is: {pattern_string}")
+                knowledge_gap = {"pattern": pattern_string, "gaps": answer['knowledgeGaps']}
                 knowledge_gaps.append(knowledge_gap)
         else: # knowledgeGaps is not in answer
             raise Exception("The knowledge network should support and return knowledge gaps!")
