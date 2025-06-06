@@ -32,11 +32,9 @@ PORT=8000
 
 On top of the mandatory basic endpoint configuration a few other environment variables can be used to enable additional functionality.
 
-Firstly, the knowledge engine contains a reasoner that enables combination of result bindings of different sources. Enabling this reasoner increases the possibilities to get a (complete) answer to the query. This can be done by setting the environment variable ENABLE_REASONER. This is a boolean variable that has either the value True of False. If it is not set, the default value is False, so reasoning is not enabled.
+Firstly, the endpoint is by default unsecured. To provide a more secure configuration, the endpoint can make use of tokens. This enables the support of trusted authentication of multiple, different requesters that are securely identified with secret tokens issued by a trusted third party. To enable this, the optional environment variable TOKEN_ENABLED can be set. This is a boolean variable that has either the value True of False. If it is not set, the default value is False, so no tokens need to be provided.
 
-Secondly, the endpoint is by default unsecured. To provide a more secure configuration, the endpoint can make use of tokens. This enables the support of trusted authentication of multiple, different requesters that are securely identified with secret tokens issued by a trusted third party. To enable this, the optional environment variable TOKEN_ENABLED can be set. This is a boolean variable that has either the value True of False. If it is not set, the default value is False, so no tokens need to be provided.
-
-Thirdly, in the current version, the trusted third party is implemented as a file, named `tokens_to_requesters.json`, that contains the mapping in a JSON format from tokens to requester identifiers. So, if TOKEN_ENABLED is set to True, the location of this file must be defined in the environment variable TOKENS_FILE_PATH, which is the path to the file. An example of the structure of this file is given in the file `tokens_to_requesters.json.default` in this folder. A snapshot of its contents looks like:
+Secondly, in the current version, the trusted third party is implemented as a file, named `tokens_to_requesters.json`, that contains the mapping in a JSON format from tokens to requester identifiers. So, if TOKEN_ENABLED is set to True, the location of this file must be defined in the environment variable TOKENS_FILE_PATH, which is the path to the file. An example of the structure of this file is given in the file `tokens_to_requesters.json.default` in this folder. A snapshot of its contents looks like:
 
 ```
 [
@@ -51,12 +49,11 @@ Thirdly, in the current version, the trusted third party is implemented as a fil
 ]
 ```
 
-Fourthly, as the Knowledge Engine SPARQL endpoint might be used in various different applications and domains, a name that is specific for the application or domain can be given in the environment variable SPARQL_ENDPOINT_NAME. The default value for this variable is "Knowledge Engine".
+Thirdly, as the Knowledge Engine SPARQL endpoint might be used in various different applications and domains, a name that is specific for the application or domain can be given in the environment variable SPARQL_ENDPOINT_NAME. The default value for this variable is "Knowledge Engine".
 
 Example values for these mandatory environment variables are:
 
 ```
-ENABLE_REASONER=True
 TOKEN_ENABLED=True
 TOKENS_FILE_PATH=./tokens_to_requesters.json
 SPARQL_ENDPOINT_NAME="My cute"
@@ -202,7 +199,7 @@ For example:
 
 `{"query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }" }`
 
-The result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) a pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. For instance, the result for the query above with no bindings but with knowledge gaps can look like:
+The result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) the part of the pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. For instance, the result for the query above with no bindings but with knowledge gaps can look like:
 
 	{
 	    "head": {
@@ -213,9 +210,7 @@ The result of the query will also be returned in a SPARQL1.1 Query Results JSON 
 	    },
 	    "knowledge_gaps": [
 	        {
-	            "pattern": [
-	                "?event <https://example.org/hasOccurredAt> ?datetime"
-	            ],
+	            "pattern": "?event <https://example.org/hasOccurredAt> ?datetime .",
 	            "gaps": [
 	                [
 	                    "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/MainHistoricEvents>"
