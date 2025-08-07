@@ -4,7 +4,7 @@ The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 
 
 IMPORTANT!
 
-In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. Other constructs will be handled in future versions of the endpoint.
+In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
 
 ## Configuration
 
