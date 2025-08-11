@@ -142,8 +142,14 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
             # part p2 is an optional part which is BGP and its triples should be added as optional graph pattern
             optional_graph_patterns.append(algebra['p2']['triples']) 
         case "Extend":
-            # the extend contains an AggregateJoin with a Group with a BGP => this BGP should be added to the main graph pattern
-            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p']['p']['p'], main_graph_pattern, optional_graph_patterns)
+            # the extend contains a part p that should be further processed
+            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
+        case "AggregateJoin":
+            # the aggregateJoin contains a part p that should be further processed
+            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
+        case "Group":
+            # the group contains a part p that should be further processed
+            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
         case _:
             raise Exception(f"Unsupported construct type {type}. Please implement this!")
 
