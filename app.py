@@ -259,6 +259,8 @@ def handle_query(params, gaps_enabled) -> dict:
         result = local_query_executor.executeQuery(graph, query)
         if gaps_enabled:
             result['knowledge_gaps'] = knowledge_gaps
+            if knowledge_gaps: #bindings should be empty
+                result['results']['bindings'] = [{}]
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f"Query could not be executed on the local graph: {e}")

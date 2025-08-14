@@ -23,8 +23,7 @@ def executeQuery(graph: Graph, query: str) -> dict:
     logger.debug(f'Result of the query when executed on the local graph {result.bindings}')
     logger.debug(f'Variables used in the result of the query {result.vars}')
     # reformat the result into a SPARQL 1.1 JSON result structure
-    json_result = reformatResultIntoSPARQLJson(result)
-    # unregister the ASK knowledge interaction for the knowledge base    
+    json_result = reformatResultIntoSPARQLJson(result) 
     return json_result
 
 def reformatResultIntoSPARQLJson(result:dict) -> dict:

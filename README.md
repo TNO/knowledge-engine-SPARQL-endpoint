@@ -2,7 +2,7 @@
 
 The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine).
 
-IMPORTANT!
+IMPORTANT!!!
 
 In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
 
@@ -199,14 +199,21 @@ For example:
 
 `{"query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }" }`
 
-The result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) the part of the pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. For instance, the result for the query above with no bindings but with knowledge gaps can look like:
+The result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) the part of the pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. 
+
+IMPORTANT!!!
+
+When knowledge gaps are found, the result of the query will ALWAYS be empty!!
+This might be in contrast with the SPARQL1.1 specification that allows a non-empty result for, e.g., aggregate functions such as AVG or SUM on an empty set of elements.
+
+For this route, the result for the query above with no bindings but with knowledge gaps can look like:
 
 	{
 	    "head": {
 	        "vars": [ "event", "datetime" ]
 	    },
 	    "results": {
-	        "bindings": []
+	        "bindings": [{}]
 	    },
 	    "knowledge_gaps": [
 	        {
