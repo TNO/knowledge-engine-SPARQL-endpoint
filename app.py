@@ -6,7 +6,7 @@ import logging_config as lc
 
 # api imports
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Response, Body
+from fastapi import FastAPI, HTTPException, Request, Response, Body
 from fastapi.responses import JSONResponse
 from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
@@ -173,6 +173,62 @@ async def post(params: Annotated[
                             Body(openapi_examples=OPENAPI_EXAMPLES)
                         ]
             ) -> dict:
+    return handle_query(params, False)
+
+
+# example: curl -X 'POST' 'http://localhost:8000/query/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
+@app.post('/query-new/',
+          tags=["SPARQL query execution"], 
+          description="""
+              This POST operation accepts in the request body a correct SPARQL 1.1 query from a requester.
+              It will fire this query onto the knowledge network that is provided to the SPARQL endpoint and
+              returns bindings for the query in JSON format according to the SPARQL 1.1 Query Results specification.
+              When tokens are enabled by the endpoint,
+              each request must be accompanied by a valid secret token for the requester."
+          """,
+          responses={
+              200: {
+                  "content": {
+                       "application/json": {
+                            "example": {
+                                "head": {
+                                    "vars": [ "event", "datetime" ]
+                                },
+                                "results": {
+                                    "bindings": [
+                                        {
+                                            "event": {
+                                                "type": "uri",
+                                                "value": "https://example.org/FirstLandingOnTheMoon"
+                                            },
+                                            "datetime": {
+                                                "type": "literal",
+                                                "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                                                "value": "1969-07-20T20:05:00Z"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+async def post(request: Request) -> dict:
+    
+    # first get the query out of the body
+    query = await request.body()
+    logger.info(f"Request body is: {query}")
+    
+    # second, get the token out of the query parameters
+    token = request.query_params['token']
+    logger.info(f"Token is: {token}")
+    
+    
+    # put the token and the query in the parameters
+    params = QueryInputParameters(token=token,query=query)
+
     return handle_query(params, False)
 
 
