@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+import urllib
 
 # import other py's from this repository
 import local_query_executor
@@ -33,19 +34,6 @@ logging.basicConfig(level=logging.DEBUG)
 ####################
 
 SPARQL_ENDPOINT_NAME = os.getenv("SPARQL_ENDPOINT_NAME","Knowledge Engine")
-
-if "TOKEN_ENABLED" in os.environ:
-    TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
-    match TOKEN_ENABLED:
-        case "True":
-            TOKEN_ENABLED = True
-        case "False":
-            TOKEN_ENABLED = False
-        case _:
-            raise Exception("Incorrect TOKEN_ENABLED flag => You should provide a correct TOKEN_ENABLED flag that is either True to False!")
-else: # no token_enabled flag, so set the flag to false
-    TOKEN_ENABLED = False
-logger.info(f'TOKEN_ENABLED is set to {TOKEN_ENABLED}')
 
 try:
     with open("./example_query.json") as f:
@@ -97,8 +85,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=f"{SPARQL_ENDPOINT_NAME} SPARQL Endpoint",
               description="This SPARQL Endpoint is a generic component that takes a SPARQL query as input, "
                           "fires this query to an existing knowledge network and returns the collected "
-                          f"bindings as a JSON string. The endpoint token enabled flag is set to {TOKEN_ENABLED}. "
-                          "If so, the queries need to be accompanied with a token to ensure trusted and "
+                          "bindings as a JSON string. The endpoint can enable tokens with the flag TOKEN_ENABLED."
+                          "If so, the queries need to be accompanied with a token parameter to ensure trusted and "
                           "secure access via an identification and authentication service.",
               openapi_tags=[{"name": "Connection Test",
                              "description": "These routes can be used to test the connection of the API."},
@@ -216,20 +204,45 @@ async def post(params: Annotated[
             }
         )
 async def post(request: Request) -> dict:
+    logger.info(f"Received POST request to be handled.")
     
-    # first get the query out of the body
-    query = await request.body()
-    logger.info(f"Request body is: {query}")
-    
-    # second, get the token out of the query parameters
-    token = request.query_params['token']
-    logger.info(f"Token is: {token}")
-    
-    
-    # put the token and the query in the parameters
-    params = QueryInputParameters(token=token,query=query)
+    # first, get a requester_id. If tokens are enabled and the request has a valid token,
+    # the requester_id is the name that belongs to the it, otherwise it is simply "requester" 
+    try:
+        requester_id = ttp_client.check_token_and_get_requester_id(request)
+    except Exception as e:
+        raise HTTPException(status_code=401,
+                            detail=f"Unauthorized: {e}")
+    logger.info(f"Request is coming from '{requester_id}'!")
 
-    return handle_query(params, False)
+    # now, only accept the two POST options as defined in section 2.1 of the SPARQL 1.1 protocol
+    # first, handle the "query via POST directly" option
+    if request.headers['Content-Type'] == "application/sparql-query":
+        # an "Unencoded SPARQL query string" should be in the body of the request
+        query = await request.body()
+        query = query.decode()
+    
+    # second, handle the "query via URL-encoded POST" option
+    elif request.headers['Content-Type'] == "application/x-www-form-urlencoded":
+        # the body should contain a URL-encoded parameter "query", optionally ampersand separated with other parameters
+        body = await request.body()
+        try:
+            parameters = body.decode().split("&")
+            parameter_list = {p.split("=",1)[0] : p.split("=",1)[1] for p in parameters}
+            query = parameter_list['query']
+            query = urllib.parse.unquote(query)
+        except:
+            raise HTTPException(status_code=400,
+                                detail="Bad Request: You should provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
+        
+    # all other options should not be accepted
+    else:
+        raise HTTPException(status_code=415,
+                            detail="Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
+
+    logger.info(f"SPARQL Query is: {query}")
+
+    return handle_query(requester_id, query, False)
 
 
 # example: curl -X 'POST' 'http://localhost:8000/query-with-gaps/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
@@ -279,28 +292,15 @@ async def post(params: Annotated[
     return handle_query(params, True)
 
 
-def handle_query(params, gaps_enabled) -> dict:
-    logger.info(f'Received query: {params.query}')
-    logger.debug(f'Received token: {params.token}')
-    query = params.query
+def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
+    #logger.info(f"Received query: \n{query} \nfrom: {requester_id}")
     
-    if TOKEN_ENABLED:
-        # check validity of token and get the requester ID 
-        try:
-            requester_id = ttp_client.validate_token(params.token)
-        except Exception as e:
-            raise HTTPException(status_code=401,
-                                detail=f"Unauthorized: {e}")
-        logger.info(f'Token validity successfully checked and received a requester_id!')
-    else:
-        requester_id = "requester"
-
     # check whether the requester's knowledge base already exists, if not create it
     try:
         knowledge_network.check_knowledge_base_existence(requester_id)
     except Exception as e:
         raise HTTPException(status_code=500,
-                            detail=f'An unexpected error occurred: {e}')
+                            detail=f"An unexpected error occurred: {e}")
 
     # take the query and build a graph with bindings from the knowledge network needed to satisfy the query
     try:
@@ -308,6 +308,7 @@ def handle_query(params, gaps_enabled) -> dict:
     except Exception as e:
         raise HTTPException(status_code=400,
                             detail=f"Query could not be processed by the endpoint: {e}")
+        
     logger.info(f"Successfully constructed a graph from the knowledge network!")
 
     # execute the query on the graph with the retrieved bindings
@@ -320,6 +321,7 @@ def handle_query(params, gaps_enabled) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500,
                             detail=f"Query could not be executed on the local graph: {e}")
+        
     logger.info(f"SPARQL Endpoint generated the following result to the query {result}!")
 
     return result
