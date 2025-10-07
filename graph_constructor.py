@@ -46,8 +46,14 @@ class PrologueNew(Prologue):
 def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabled) -> tuple[Graph, list]:
     
     # first parse the query
-    parsed_query = parseQuery(query)
-
+    try:
+        parsed_query = parseQuery(query)
+    except Exception as e:
+        # create a message that says that only SELECT queries are expected and raise that exception
+        replaceable_string = "Expected {SelectQuery | ConstructQuery | DescribeQuery | AskQuery}"
+        message = str(e).replace(replaceable_string,"Expected SelectQuery")
+        raise Exception(message)
+    
     # then determine whether the query is a SELECT query, because we only accept those!
     if not parsed_query[1].name == "SelectQuery":
         raise Exception(f"Only SELECT queries are supported!")
@@ -70,7 +76,7 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p']['p'], main_graph_pattern, optional_graph_patterns)
     except Exception as e:
         raise Exception(f"Could not derive graph pattern, {e}")
-    logger.info(f"main graph pattern is: {main_graph_pattern}")
+    logger.debug(f"main graph pattern is: {main_graph_pattern}")
     showPattern(main_graph_pattern, prologue.namespace_manager, "main")
     for p in optional_graph_patterns:
         showPattern(p, prologue.namespace_manager, "optional")
