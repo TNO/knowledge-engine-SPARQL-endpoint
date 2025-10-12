@@ -41,24 +41,91 @@ try:
         EXAMPLE_QUERY = queries['query']
 except:
     EXAMPLE_QUERY = "SELECT * WHERE {?event <https://example.org/hasOccurredAt> ?datetime}"
-OPENAPI_EXAMPLES = {
-        "default": {
-            "description": "The default usage is to only provide a correct SPARQL query",
-            "value": {"query": f"{EXAMPLE_QUERY}"}
+
+if "TOKEN_ENABLED" in os.environ:
+    TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
+    match TOKEN_ENABLED:
+        case "True":
+            TOKEN_ENABLED = True
+        case _:
+            TOKEN_ENABLED = False
+
+
+####################
+#  OPENAPI EXTRAS  #
+####################
+
+OPENAPI_TOKEN_PARAMETER = {
+    "parameters": [
+        {
+            "in": "query",
+            "name": "token",
+            "schema": {
+                "type": "string"
             },
-        "token_enabled": {
-            "description": "When tokens are enabled, a correct token needs to be provided",
-            "value": {"token": "1234", "query": f"{EXAMPLE_QUERY}"}
-            }
+            "description": "Tokens are enabled by the endpoint, so you must provide your valid secret token.",
+            "required": True
+        }
+    ]
+}
+
+OPENAPI_POST_REQUEST_BODY = {
+    "requestBody": {
+        "content": {
+            "application/sparql-query": {
+                "schema": {"type": "string", "example": f"{EXAMPLE_QUERY}"},
+                },
+            "application/x-www-form-urlencoded": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "example": f"{EXAMPLE_QUERY}",
+                            },
+                        }
+                    },
+                },
+            },
+        "required": True,
     }
+}
+
+if TOKEN_ENABLED:
+    OPENAPI_TOKEN_STATEMENT = "Tokens are enabled by the endpoint, so each request must be accompanied by a valid secret token for the requester.<br><br>"
+    OPENAPI_EXTRA_POST_REQUEST = {**OPENAPI_TOKEN_PARAMETER, **OPENAPI_POST_REQUEST_BODY}
+else:
+    OPENAPI_TOKEN_STATEMENT = ""
+    OPENAPI_EXTRA_POST_REQUEST = OPENAPI_POST_REQUEST_BODY
+
 
 ##################
 # HELPER CLASSES #
 ##################
 
+class Vars(BaseModel):
+    vars: list[str]
+
+class RDFTerm(BaseModel):
+    type: str
+    value: str
+    datatype: str | None = None
+    
+class QuerySolution(BaseModel):
+    nameOfFirstVariableInVarsList: RDFTerm
+    nameOfSecondVariableInVarsList: RDFTerm
+    nameOfLastVariableInVarsList: RDFTerm
+    
+class Bindings(BaseModel):
+    bindings: list[QuerySolution]
+        
+class SPARQLResultResponse(BaseModel):
+    head: Vars
+    results: Bindings
+
 class QueryInputParameters(BaseModel):
     token: str | None = Field(default=None, title="The token that secretly identifies the requester")
-    query: str = Field(description="The SPARQL query to be handled by the endpoint")
+    #query: str = Field(description="The SPARQL query to be handled by the endpoint")
 
 
 ##########################
@@ -83,11 +150,10 @@ async def lifespan(app: FastAPI):
 
 # generate a FastAPI application
 app = FastAPI(title=f"{SPARQL_ENDPOINT_NAME} SPARQL Endpoint",
-              description="This SPARQL Endpoint is a generic component that takes a SPARQL query as input, "
-                          "fires this query to an existing knowledge network and returns the collected "
-                          "bindings as a JSON string. The endpoint can enable tokens with the flag TOKEN_ENABLED."
-                          "If so, the queries need to be accompanied with a token parameter to ensure trusted and "
-                          "secure access via an identification and authentication service.",
+              description="""This SPARQL Endpoint is a generic component that takes a SPARQL 1.1 query as input, 
+                          fires this query to an existing knowledge network and returns the collected
+                          bindings in a JSON format according to the SPARQL 1.1 Query Results specification.<br><br>""" +
+                          OPENAPI_TOKEN_STATEMENT,
               openapi_tags=[{"name": "Connection Test",
                              "description": "These routes can be used to test the connection of the API."},
                             {"name": "SPARQL query execution",
@@ -121,91 +187,23 @@ async def root():
 @app.post('/query/',
           tags=["SPARQL query execution"], 
           description="""
-              This POST operation accepts in the request body a correct SPARQL 1.1 query from a requester.
-              It will fire this query onto the knowledge network that is provided to the SPARQL endpoint and
-              returns bindings for the query in JSON format according to the SPARQL 1.1 Query Results specification.
-              When tokens are enabled by the endpoint,
-              each request must be accompanied by a valid secret token for the requester."
+              This POST operation implements the 2 POST query operations defined by the [SPARQL 1.1 Protocol](https://www.w3.org/TR/sparql11-protocol/#query-operation):
+              <br><br>
+              1. The **_query via POST directly_** option accepts an unencoded SPARQL query directly in the request body.<br><br>
+              2. The **_query via URL-encoded POST_** option accepts a URL-encoded SPARQL query in the 'query' parameter of the request body.
+              <br><br>
+              NOTE: the endpoint does NOT maintain any permanent graphs. Thus, in contrast to the SPARQL 1.1 Protocol specification,
+              NO default-graph-uri or named-graph-uri can be included.<br><br>""" +
+              OPENAPI_TOKEN_STATEMENT + """
+              The operation will fire the query onto the knowledge network that is provided to the SPARQL endpoint and
+              returns bindings for the query in JSON format according to the 
+              [SPARQL 1.1 Query Results specification](https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/).
           """,
-          responses={
-              200: {
-                  "content": {
-                       "application/json": {
-                            "example": {
-                                "head": {
-                                    "vars": [ "event", "datetime" ]
-                                },
-                                "results": {
-                                    "bindings": [
-                                        {
-                                            "event": {
-                                                "type": "uri",
-                                                "value": "https://example.org/FirstLandingOnTheMoon"
-                                            },
-                                            "datetime": {
-                                                "type": "literal",
-                                                "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
-                                                "value": "1969-07-20T20:05:00Z"
-                                            }
-                                        }
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+          openapi_extra = OPENAPI_EXTRA_POST_REQUEST
         )
-async def post(params: Annotated[
-                            QueryInputParameters,
-                            Body(openapi_examples=OPENAPI_EXAMPLES)
-                        ]
-            ) -> dict:
-    return handle_query(params, False)
-
-
-# example: curl -X 'POST' 'http://localhost:8000/query/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
-@app.post('/query-new/',
-          tags=["SPARQL query execution"], 
-          description="""
-              This POST operation accepts in the request body a correct SPARQL 1.1 query from a requester.
-              It will fire this query onto the knowledge network that is provided to the SPARQL endpoint and
-              returns bindings for the query in JSON format according to the SPARQL 1.1 Query Results specification.
-              When tokens are enabled by the endpoint,
-              each request must be accompanied by a valid secret token for the requester."
-          """,
-          responses={
-              200: {
-                  "content": {
-                       "application/json": {
-                            "example": {
-                                "head": {
-                                    "vars": [ "event", "datetime" ]
-                                },
-                                "results": {
-                                    "bindings": [
-                                        {
-                                            "event": {
-                                                "type": "uri",
-                                                "value": "https://example.org/FirstLandingOnTheMoon"
-                                            },
-                                            "datetime": {
-                                                "type": "literal",
-                                                "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
-                                                "value": "1969-07-20T20:05:00Z"
-                                            }
-                                        }
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        )
-async def post(request: Request) -> dict:
+async def post(request: Request) -> SPARQLResultResponse:
     logger.info(f"Received POST request to be handled.")
-    
+
     # first, get a requester_id. If tokens are enabled and the request has a valid token,
     # the requester_id is the name that belongs to the it, otherwise it is simply "requester" 
     try:
@@ -233,7 +231,7 @@ async def post(request: Request) -> dict:
             query = urllib.parse.unquote(query)
         except:
             raise HTTPException(status_code=400,
-                                detail="Bad Request: You should provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
+                                detail="Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
         
     # all other options should not be accepted
     else:
@@ -243,6 +241,22 @@ async def post(request: Request) -> dict:
     logger.info(f"SPARQL Query is: {query}")
 
     return handle_query(requester_id, query, False)
+
+
+
+
+
+### TO BE DELETED
+OPENAPI_EXAMPLES = {
+        "default": {
+            "description": "The default usage is to only provide a correct SPARQL query",
+            "value": {"query": f"{EXAMPLE_QUERY}"}
+            },
+        "token_enabled": {
+            "description": "When tokens are enabled, a correct token needs to be provided",
+            "value": {"token": "1234", "query": f"{EXAMPLE_QUERY}"}
+            }
+    }
 
 
 # example: curl -X 'POST' 'http://localhost:8000/query-with-gaps/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
@@ -290,6 +304,72 @@ async def post(params: Annotated[
                         ]
             ) -> dict:
     return handle_query(params, True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# example: curl -X 'POST' 'http://localhost:8000/query/' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"value": "SELECT * WHERE {?s ?p ?o}"}'
+@app.post('/query-old/',
+          tags=["SPARQL query execution"], 
+          description="""
+              This POST operation accepts in the request body a correct SPARQL 1.1 query from a requester.
+              It will fire this query onto the knowledge network that is provided to the SPARQL endpoint and
+              returns bindings for the query in JSON format according to the SPARQL 1.1 Query Results specification.
+              When tokens are enabled by the endpoint,
+              each request must be accompanied by a valid secret token for the requester."
+          """,
+          responses={
+              200: {
+                  "content": {
+                       "application/json": {
+                            "example": {
+                                "head": {
+                                    "vars": [ "event", "datetime" ]
+                                },
+                                "results": {
+                                    "bindings": [
+                                        {
+                                            "event": {
+                                                "type": "uri",
+                                                "value": "https://example.org/FirstLandingOnTheMoon"
+                                            },
+                                            "datetime": {
+                                                "type": "literal",
+                                                "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                                                "value": "1969-07-20T20:05:00Z"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+async def post(params: Annotated[
+                            QueryInputParameters,
+                            Body(openapi_examples=OPENAPI_EXAMPLES)
+                        ]
+            ) -> dict:
+    return handle_query(params, False)
+
+
+
+
 
 
 def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
