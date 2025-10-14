@@ -1,6 +1,6 @@
 # Knowledge Engine SPARQL Endpoint
 
-The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine).
+The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint provides the POST query operations as defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). In addition, the endpoint also provides query operations that return knowledge gaps in case the query cannot be answered. See section 'Endpoint routes specification'.
 
 IMPORTANT!!!
 
@@ -28,7 +28,7 @@ KNOWLEDGE_BASE_ID_PREFIX=https://ke/sparql-endpoint/
 PORT=8000
 ```
 
-### Optional additional configuration (tokens, name)
+### Optional additional configuration (tokens, name, query)
 
 On top of the mandatory basic endpoint configuration a few other environment variables can be used to enable additional functionality.
 
@@ -59,10 +59,12 @@ TOKENS_FILE_PATH=./tokens_to_requesters.json
 SPARQL_ENDPOINT_NAME="My cute"
 ```
 
-Finally, if the SPARQL endpoint is being deployed for a specific application, specific example queries can be described in the endpoint documentation. This can be done by providing a file named `example_query.json`. That file should contain a single object with only a `query` field that contains the example query. For instance, for some application domain that is interested in which events have occurred at which date time this file could look like:
+Finally, if the SPARQL endpoint is being deployed for a specific application, specific example queries can be described in the endpoint documentation. This can be done by providing a file named `example_query.json`. That file should contain a single object with a `example-query` field that contains the example query and a `example-query-for-gaps` field that contains the example query for a query that results in knowledge gaps. For instance, for some application domain that is interested in which events have occurred at which date time this file could look like:
 
-```{
-    "query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }"
+```
+{
+    "example-query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }",
+    "example-query-for-gaps": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
 }
 ```
 
@@ -104,6 +106,7 @@ volumes:
   - ./tokens_to_requesters.json:/app/. 
 ```
 
+
 ### Building the Docker image yourself
 
 If you want to build the Docker image for the SPARQL endpoint yourself use the following command in the directory in which the docker-compose.yml is located:
@@ -118,27 +121,75 @@ Once succeeded, make sure the .env file contains the correct environment variabl
 
 To be able to call the endpoint from another website, the endpoint is made CORS-enabled. In the current version, ANY website is allowed to call the endpoint. Further limitations for this access needs to be added when necessary.
 
-## Endpoint routes and specification
+## Endpoint routes specification
 
-Once the endpoint is up and running, it will connect to the provided Knowledge Network and makes two routes available that start waiting for incoming queries.
+Once the endpoint is up and running, it will connect to the provided Knowledge Network and makes routes available that start waiting for incoming queries.
 
-### Basic query route
+### Token enabled
 
-The first route is a basic query route named `/query/`. This route accepts a string containing a SPARQL1.1 query that meets the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/). It will process the query, fire it on the knowledge network and return the results that are compliant with the SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
+When the endpoint has been started with tokens enabled, each endpoint route expects a token to be provided as a 'path parameter' of the operation on the endpoint. 
 
-So, when the endpoint has been deployed on the localhost at port 8000, the route will be available at:
+So, when the endpoint has been deployed on the localhost at port 8000, the token, e.g. '1234' should be added to the URL as follows:
 
-`http://localhost:8000/query/`
+`http://localhost:8000/query/?token=1234`
 
-The query that is provided to the route should be made provided in a JSON structure as follows:
+The provided token will be validated and the requester's identifier will be retrieved from the `tokens_to_requesters.json` file. Subsequently, this requester's identifier will be used in the knowledge network for authorization purposes.
 
-`{"query": "<the query>"}`
+In the specifications below, the assumption is that the endpoint is token enabled. If this is not the case, the 'token' path parameter is not required.
 
-For example:
 
-`{"query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }" }`
+### Basic POST query route
 
-The result of the query will be returned as a SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/). For instance, the result for a single binding for the query above looks like:
+The first route is a basic POST route named `/query/`. This route implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). Although this specification indicates that specific 'default-graph-uri's and/or 'named-graph-uri's can be provided as well, the `/query/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
+
+#### Query via POST directly
+
+With this option, you may send protocol requests via the HTTP POST method by including the query directly and unencoded as the HTTP request message body. When using this route, you *must* include the SPARQL query string, unencoded, and nothing else as the message body of the request. You *must* set the content type header of the HTTP request to application/sparql-query.
+
+The query should be compliant to the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/). It will process the query, fire it on the knowledge network and return the results that are compliant with the SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
+
+So, when the endpoint has been deployed on the localhost at port 8000, an unencoded query should be provided via the route as follows:
+
+`http://localhost:8000/query/?token=1234`
+
+with the query in the request body as follows:
+
+`SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime .}`
+
+or via a `curl` call:
+
+```
+curl -X 'POST' \
+  'http://localhost:8000/query/?token=1234' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/sparql-query' \
+  -d 'SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }'
+```
+
+#### Query via URL-encoded POST
+
+With this option, you may send requests via the HTTP POST method by URL encoding the parameters. When using this method, you *must* URL [percent encode](http://www.ietf.org/rfc/rfc3986.txt) all parameters and include them as parameters within the request body via the 'application/x-www-form-urlencoded' media type with the name 'query'. Parameters *must* be separated with the ampersand (&) character. You may include the parameters in any order. The content type header of the HTTP request *must* be set to application/x-www-form-urlencoded. 
+
+The query should be compliant to the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/). It will process the query, fire it on the knowledge network and return the results that are compliant with the SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
+
+So, when the endpoint has been deployed on the localhost at port 8000, a URL-encoded query should be provided via the route as follows:
+
+`http://localhost:8000/query/?token=1234&`
+`query=SELECT%20*%20WHERE%20%7B%20%3Fevent%20%3Chttp%3A%2F%2Fexample.org%2FhasOccurred%3E%20%3Fdatetime%20.`
+
+or via a `curl` call:
+
+```
+curl -X 'POST' \
+  'http://localhost:8000/query/?token=1234' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'query=SELECT%20*%20WHERE%20%7B%20%3Fevent%20%3Chttp%3A%2F%2Fexample.org%2FhasOccurred%3E%20%3Fdatetime%20.%7B'
+ ```
+
+#### Query results
+
+In both POST query routes, the result of the query will be returned as a SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/). For instance, the result for a single binding for the query above looks like:
 
 	{
 	    "head": {
@@ -149,7 +200,7 @@ The result of the query will be returned as a SPARQL1.1 Query Results JSON Forma
 	            {
 	                "event": {
 	                    "type": "uri",
-	                    "value": "https://example.org/subject"
+	                    "value": "http://example.org/FirstLandingOnTheMoon"
 	                },
 	                "datetime": {
 	                    "type": "literal",
@@ -161,50 +212,43 @@ The result of the query will be returned as a SPARQL1.1 Query Results JSON Forma
 	    }
 	}
 
-#### Token enabled
 
-If tokens are enabled, the input JSON structure should be as follows:
-
-```
-{
- "token": "<the token>",
- "query": "<the query>"
-}
-```
-
-For example:
-
-```
-{
- "token": "1234",
- "query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }"
-}
-```
-
-The provided token will be validated and the requester's identifier will be retrieved from the `tokens_to_requesters.json` file. Subsequently, this requester's identifier will be used in the knowledge network for authorization purposes.
 
 ### Knowledge gaps query route
 
-The second route is named `/query-with-gaps/` and is meant to deal with queries for which no result bindings can be found in the knowledge network. This route also accepts a SPARQL1.1 query, but is meant to act on a knowledge network that is able to return knowledge gaps. A knowledge gap is a graph pattern that need to be provided by the knowledge network to be able to answer the query. 
+The second route is also a POST route named `/query-with-gaps/`. This route also implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). However, in contrast to the basic 'query' route, it is meant to act on a knowledge network that is able to return knowledge gaps, i.e. SPARQL1.1 queries for which NO result bindings can be found in the knowledge network. A knowledge gap is a graph pattern that needs to be provided by the knowledge network to be able to answer the query.
 
-So, when the endpoint has been deployed on the localhost at port 8000, the route will be available at:
+As with the `/query/` route, specific 'default-graph-uri's and/or 'named-graph-uri's can be provided as well, but the `/query-with-gaps/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
 
-`http://localhost:8000/query-with-gaps/`
+The path parameters, query parameters and request body for the `/query-with-gaps/` route are exactly the same as for the `/query/` route.
 
-The query that is provided to the route should be made provided in a JSON structure as follows:
+So, when the endpoint has been deployed on the localhost at port 8000, an unencoded query should be provided via the route as follows:
 
-`{"query": "<the query>"}`
+`http://localhost:8000/query-with-gaps/?token=1234`
 
-For example:
+with the query in the request body as follows:
 
-`{"query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }" }`
+`SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}`
 
-The result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) the part of the pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. 
+or via a `curl` call:
+
+```
+curl -X 'POST' \
+  'http://localhost:8000/query/?token=1234' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/sparql-query' \
+  -d 'SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}'
+```
+
+Similar for the URL-encoded query POST option.
+
+#### Query with gaps results
+
+In both POST query routes, the result of the query will also be returned in a SPARQL1.1 Query Results JSON Format, but, as allowed by the [specification](https://www.w3.org/TR/sparql11-results-json/) has an additional field `knowledge_gaps` that contains one or more tuples with (1) the part of the pattern of the query that cannot be answered and (2) one or more gaps that need to satisfied to answer this pattern and thus the entire query. 
 
 IMPORTANT!!!
 
-When knowledge gaps are found, the result of the query will ALWAYS be empty!!
-This might be in contrast with the SPARQL1.1 specification that allows a non-empty result for, e.g., aggregate functions such as AVG or SUM on an empty set of elements.
+When knowledge gaps are found, the result of the query will ALWAYS be empty!! This might be in contrast with the SPARQL1.1 specification that allows a non-empty result for, e.g., aggregate functions such as AVG or SUM on an empty set of elements.
 
 For this route, the result for the query above with no bindings but with knowledge gaps can look like:
 
@@ -217,21 +261,21 @@ For this route, the result for the query above with no bindings but with knowled
 	    },
 	    "knowledge_gaps": [
 	        {
-	            "pattern": "?event <https://example.org/hasOccurredAt> ?datetime .",
+	            "pattern": "?event <https://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .",
 	            "gaps": [
 	                [
-	                    "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/MainHistoricEvents>"
+	                    "?event <http://example.org/mainPersonsInvolved> ?person"
 	                ]
 	            ]
 	        }
 	    ]
 	}
 
-If tokens are enabled, the input JSON structure is similar as for the basic `/query/` route.
 
 ## API Documentation
 
-As the endpoint is implemented as a FastAPI, more documentation of the available routes and their parameters can be found in the `/docs` extension of the endpoint. The `request body` of the `/query/` route provides some examples of queries that can be used to "try it out". By default the example query is `SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }`.
+As the endpoint is implemented as a FastAPI, more documentation of the available routes and their parameters can be found in the `/docs` extension of the endpoint. You can also use that to "Try it out"!
+
 
 ## Tests
 
