@@ -66,11 +66,51 @@ OPENAPI_TOKEN_PARAMETER = {
                 "type": "string"
             },
             "description": "Tokens are enabled by the endpoint, so you must provide your valid secret token.",
+            "example": f"{1234}",
             "required": True
         }
     ]
 }
 
+OPENAPI_GET_REQUEST_QUERY = {
+    "parameters": [
+        {
+            "in": "query",
+            "name": "query",
+            "schema": {
+                "type": "string"
+            },
+            "description": "This should be a URL-encoded SPARQL 1.1 query string.",
+            "example": f"{EXAMPLE_QUERY}",
+            "required": True
+        }
+    ]
+}
+
+OPENAPI_GET_REQUEST_QUERY_WITH_TOKEN = {
+    "parameters": [
+        {
+            "in": "query",
+            "name": "token",
+            "schema": {
+                "type": "string"
+            },
+            "description": "Tokens are enabled by the endpoint, so you must provide your valid secret token.",
+            "example": f"{1234}",
+            "required": True
+        },
+        {
+            "in": "query",
+            "name": "query",
+            "schema": {
+                "type": "string"
+            },
+            "description": "This should be a URL-encoded SPARQL 1.1 query string.",
+            "example": f"{EXAMPLE_QUERY}",
+            "required": True
+        }
+    ]
+}
 OPENAPI_POST_REQUEST_BODY = {
     "requestBody": {
         "content": {
@@ -117,10 +157,12 @@ OPENAPI_POST_REQUEST_BODY_FOR_GAPS = {
 
 if TOKEN_ENABLED:
     OPENAPI_TOKEN_STATEMENT = "Tokens are enabled by the endpoint, so each request must be accompanied by a valid secret token for the requester.<br><br>"
+    OPENAPI_EXTRA_GET_REQUEST = OPENAPI_GET_REQUEST_QUERY_WITH_TOKEN
     OPENAPI_EXTRA_POST_REQUEST = {**OPENAPI_TOKEN_PARAMETER, **OPENAPI_POST_REQUEST_BODY}
     OPENAPI_EXTRA_POST_REQUEST_FOR_GAPS = {**OPENAPI_TOKEN_PARAMETER, **OPENAPI_POST_REQUEST_BODY_FOR_GAPS}
 else:
     OPENAPI_TOKEN_STATEMENT = ""
+    OPENAPI_EXTRA_GET_REQUEST = OPENAPI_GET_REQUEST_QUERY
     OPENAPI_EXTRA_POST_REQUEST = OPENAPI_POST_REQUEST_BODY
     OPENAPI_EXTRA_POST_REQUEST_FOR_GAPS = OPENAPI_POST_REQUEST_BODY_FOR_GAPS
 
@@ -214,6 +256,44 @@ async def root():
 
 
 # see the docs for examples how to use this route
+@app.get('/query/',
+         tags=["SPARQL query execution"], 
+         description="""
+             This GET operation implements the GET query operation defined by the [SPARQL 1.1 Protocol](https://www.w3.org/TR/sparql11-protocol/#query-operation):
+             <br><br>
+             - The **_query via GET_** accepts a URL-encoded SPARQL query as a query parameter.<br><br>
+             NOTE: the endpoint does NOT maintain any permanent graphs. Thus, in contrast to the SPARQL 1.1 Protocol specification,
+             NO default-graph-uri or named-graph-uri can be included.<br><br>""" +
+             OPENAPI_TOKEN_STATEMENT + """
+             The operation will fire the query onto the knowledge network that is provided to the SPARQL endpoint and
+             returns bindings for the query in JSON format according to the 
+             [SPARQL 1.1 Query Results specification](https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/).
+        """,
+        openapi_extra = OPENAPI_EXTRA_GET_REQUEST
+        )
+async def get(request: Request) -> SPARQLResultResponse:
+    logger.info(f"Received GET request /query/ to be handled.")
+    
+    # get the body from the request, which should be empty
+    body = await request.body()
+    body = body.decode()
+    if body != "":
+        raise HTTPException(status_code=400,
+                            detail="Bad Request: You MUST NOT provide a message body!")
+    # get the query out of request
+    try:
+        query = request.query_params['query']
+    except:
+        raise HTTPException(status_code=400,
+                            detail="Bad Request: You should provide a URL-encoded query as a query string parameter!")
+
+    # then get the requester_id and query string
+    requester_id, query = get_requester_and_query_from_request(request, query)
+
+    return handle_query(requester_id, query, False)
+
+
+# see the docs for examples how to use this route
 @app.post('/query/',
           tags=["SPARQL query execution"], 
           description="""
@@ -235,7 +315,8 @@ async def post(request: Request) -> SPARQLResultResponse:
     logger.info(f"Received POST request /query/ to be handled.")
     # get byte query out of request with await
     query = await request.body()
-    # then ge the requester_id and query string
+    
+    # then get the requester_id and query string
     requester_id, query = get_requester_and_query_from_request(request, query)
 
     return handle_query(requester_id, query, False)
@@ -288,28 +369,37 @@ def get_requester_and_query_from_request(request: Request, query: str):
                             detail=f"Unauthorized: {e}")
     logger.info(f"Request is coming from '{requester_id}'!")
 
-    # now, only accept the two POST options as defined in section 2.1 of the SPARQL 1.1 protocol
-    # first, handle the "query via POST directly" option
-    if request.headers['Content-Type'] == "application/sparql-query":
-        # an "Unencoded SPARQL query string" should be in the body of the request
-        query = query.decode()
-    
-    # second, handle the "query via URL-encoded POST" option
-    elif request.headers['Content-Type'] == "application/x-www-form-urlencoded":
-        # the body should contain a URL-encoded parameter "query", optionally ampersand separated with other parameters
-        try:
-            parameters = query.decode().split("&")
-            parameter_list = {p.split("=",1)[0] : p.split("=",1)[1] for p in parameters}
-            query = parameter_list['query']
-            query = urllib.parse.unquote(query)
-        except:
+    if request.method == "GET":
+        logger.debug(f"Request method is: GET")
+        # the request should not have a content-type!
+        if 'content-type' in request.headers.keys():
             raise HTTPException(status_code=400,
-                                detail="Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
+                                detail="Bad Request: You MUST NOT provide a Content-Type!")
         
-    # all other options should not be accepted
-    else:
-        raise HTTPException(status_code=415,
-                            detail="Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
+    if request.method == "POST":
+        logger.debug(f"Request method is: POST")
+        # now, only accept the two POST options as defined in section 2.1 of the SPARQL 1.1 protocol
+        # first, handle the "query via POST directly" option
+        if request.headers['Content-Type'] == "application/sparql-query":
+            # an "Unencoded SPARQL query string" should be in the body of the request
+            query = query.decode()
+        
+        # second, handle the "query via URL-encoded POST" option
+        elif request.headers['Content-Type'] == "application/x-www-form-urlencoded":
+            # the body should contain a URL-encoded parameter "query", optionally ampersand separated with other parameters
+            try:
+                parameters = query.decode().split("&")
+                parameter_list = {p.split("=",1)[0] : p.split("=",1)[1] for p in parameters}
+                query = parameter_list['query']
+                query = urllib.parse.unquote(query)
+            except:
+                raise HTTPException(status_code=400,
+                                    detail="Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
+            
+        # all other options should not be accepted
+        else:
+            raise HTTPException(status_code=415,
+                                detail="Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
 
     logger.info(f"SPARQL Query is: {query}")
 
