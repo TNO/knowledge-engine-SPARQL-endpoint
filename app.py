@@ -288,7 +288,7 @@ async def get(request: Request) -> SPARQLResultResponse:
                             detail="Bad Request: You should provide a URL-encoded query as a query string parameter!")
 
     # then get the requester_id and query string
-    requester_id, query = get_requester_and_query_from_request(request, query)
+    requester_id, query = process_request_message_and_get_request_and_query(request, query)
 
     return handle_query(requester_id, query, False)
 
@@ -317,7 +317,7 @@ async def post(request: Request) -> SPARQLResultResponse:
     query = await request.body()
     
     # then get the requester_id and query string
-    requester_id, query = get_requester_and_query_from_request(request, query)
+    requester_id, query = process_request_message_and_get_request_and_query(request, query)
 
     return handle_query(requester_id, query, False)
 
@@ -350,7 +350,7 @@ async def post(request: Request) -> SPARQLResultWithGapsResponse:
     # get byte query out of request with await
     query = await request.body()
     # then ge the requester_id and query string
-    requester_id, query = get_requester_and_query_from_request(request, query)
+    requester_id, query = process_request_message_and_get_request_and_query(request, query)
 
     return handle_query(requester_id, query, True)
 
@@ -359,16 +359,25 @@ async def post(request: Request) -> SPARQLResultWithGapsResponse:
 # HELPER FUNCTIONS #
 ####################
 
-def get_requester_and_query_from_request(request: Request, query: str):
-    # first, get a requester_id. If tokens are enabled and the request has a valid token,
-    # the requester_id is the name that belongs to the it, otherwise it is simply "requester" 
+def process_request_message_and_get_request_and_query(request: Request, query: str):
+    # first, check the token and get a requester_id.
     try:
         requester_id = ttp_client.check_token_and_get_requester_id(request)
     except Exception as e:
         raise HTTPException(status_code=401,
                             detail=f"Unauthorized: {e}")
     logger.info(f"Request is coming from '{requester_id}'!")
+    
+    # then, do "content negotiation" by checking the accept header provided by the client
+    if 'accept' not in request.headers.keys():
+        raise HTTPException(status_code=412,
+                            detail="Precondition Failed: You should provide the 'Accept' header set to 'application/json'!")
+    else:
+        if request.headers['accept'] != "application/json":
+            raise HTTPException(status_code=412,
+                                detail="Precondition Failed: The server only provides JSON results, so the 'Accept' header should be set to 'application/json'!")
 
+    # then, deal with the various GET and POST operations
     if request.method == "GET":
         logger.debug(f"Request method is: GET")
         # the request should not have a content-type!
