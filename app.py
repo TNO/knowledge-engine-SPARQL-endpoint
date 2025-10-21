@@ -42,7 +42,7 @@ try:
         EXAMPLE_QUERY_FOR_GAPS = queries['example-query-for-gaps']
 except:
     EXAMPLE_QUERY = "SELECT * WHERE {?event <http://example.org/hasOccurredAt> ?datetime .}"
-    EXAMPLE_QUERY_TO_SHOW_GAPS = "SELECT * WHERE {?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
+    EXAMPLE_QUERY_FOR_GAPS = "SELECT * WHERE {?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
