@@ -130,6 +130,10 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
     match type:
         case "BGP":
             main_graph_pattern = main_graph_pattern + algebra['triples']
+        case "ToMultiSet":
+            # the toMultiSet contains a set of values with <variable,value> pairs to be used in the graph patterrns
+            main_graph_pattern, optional_graph_patterns = replaceVariablesWithValues(algebra['p'], main_graph_pattern, optional_graph_patterns)
+            raise Exception(f"Unsupported construct type {type}. Please implement this!")
         case "Filter":
             if not str(algebra['expr']).startswith("Builtin"):
                 # it is a filter with a value for a variable, so this does not contain triples to be added to the graph pattern
@@ -140,8 +144,8 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
                 raise Exception(f"Unsupported expression {str(algebra['expr']).split('{')[0]} in construct type {type}. Please implement this!")
         case "Join":
             # both parts should be added to the same main graph pattern
-            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p2'], main_graph_pattern, optional_graph_patterns)
-            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p1'], main_graph_pattern, optional_graph_patterns)            
+            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p1'], main_graph_pattern, optional_graph_patterns)
+            main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p2'], main_graph_pattern, optional_graph_patterns)            
         case "LeftJoin":
             # part p1 should be added to the main graph pattern
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p1'], main_graph_pattern, optional_graph_patterns)
