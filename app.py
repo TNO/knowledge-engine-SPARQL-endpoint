@@ -278,12 +278,14 @@ async def get(request: Request) -> SPARQLResultResponse:
     body = await request.body()
     body = body.decode()
     if body != "":
+        logger.debug("Bad Request: You MUST NOT provide a message body!")
         raise HTTPException(status_code=400,
                             detail="Bad Request: You MUST NOT provide a message body!")
     # get the query out of request
     try:
         query = request.query_params['query']
     except:
+        logger.debug("Bad Request: You should provide a URL-encoded query as a query string parameter!")
         raise HTTPException(status_code=400,
                             detail="Bad Request: You should provide a URL-encoded query as a query string parameter!")
 
@@ -364,24 +366,27 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
     try:
         requester_id = ttp_client.check_token_and_get_requester_id(request)
     except Exception as e:
+        logger.debug(f"Unauthorized: {e}")
         raise HTTPException(status_code=401,
                             detail=f"Unauthorized: {e}")
     logger.info(f"Request is coming from '{requester_id}'!")
     
     # then, do "content negotiation" by checking the accept header provided by the client
-    if 'accept' not in request.headers.keys():
+    if 'accept' in request.headers.keys() and request.headers['accept'] != "application/json":
+        logger.debug("Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
         raise HTTPException(status_code=412,
-                            detail="Precondition Failed: You should provide the 'Accept' header set to 'application/json'!")
-    else:
-        if request.headers['accept'] != "application/json":
-            raise HTTPException(status_code=412,
-                                detail="Precondition Failed: The server only provides JSON results, so the 'Accept' header should be set to 'application/json'!")
+                            detail="Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
+    #else:
+    #    if request.headers['accept'] != "application/json":
+    #        raise HTTPException(status_code=412,
+    #                            detail="Precondition Failed: The server only provides JSON results, so the 'Accept' header should be set to 'application/json'!")
 
     # then, deal with the various GET and POST operations
     if request.method == "GET":
         logger.debug(f"Request method is: GET")
         # the request should not have a content-type!
         if 'content-type' in request.headers.keys():
+            logger.debug("Bad Request: You MUST NOT provide a Content-Type!")
             raise HTTPException(status_code=400,
                                 detail="Bad Request: You MUST NOT provide a Content-Type!")
         
@@ -402,11 +407,13 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
                 query = parameter_list['query']
                 query = urllib.parse.unquote(query)
             except:
+                logger.debug("Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
                 raise HTTPException(status_code=400,
                                     detail="Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
             
         # all other options should not be accepted
         else:
+            logger.debug("Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
             raise HTTPException(status_code=415,
                                 detail="Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
 
@@ -422,6 +429,7 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
     try:
         knowledge_network.check_knowledge_base_existence(requester_id)
     except Exception as e:
+        logger.debug(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500,
                             detail=f"An unexpected error occurred: {e}")
 
@@ -429,6 +437,7 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
     try:
         graph, knowledge_gaps = graph_constructor.constructGraphFromKnowledgeNetwork(query, requester_id, gaps_enabled)
     except Exception as e:
+        logger.debug(f"Query could not be processed by the endpoint: {e}")
         raise HTTPException(status_code=400,
                             detail=f"Query could not be processed by the endpoint: {e}")
         
@@ -442,6 +451,7 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
             if knowledge_gaps: #bindings should be empty
                 result['results']['bindings'] = [{}]
     except Exception as e:
+        logger.debug(f"Query could not be executed on the local graph: {e}")
         raise HTTPException(status_code=500,
                             detail=f"Query could not be executed on the local graph: {e}")
         
