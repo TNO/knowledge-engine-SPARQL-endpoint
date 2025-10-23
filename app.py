@@ -51,6 +51,8 @@ if "TOKEN_ENABLED" in os.environ:
             TOKEN_ENABLED = True
         case _:
             TOKEN_ENABLED = False
+else: # no token_enabled flag, so set the flag to false
+    TOKEN_ENABLED = False
 
 
 ####################
@@ -376,10 +378,6 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
         logger.debug("Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
         raise HTTPException(status_code=412,
                             detail="Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
-    #else:
-    #    if request.headers['accept'] != "application/json":
-    #        raise HTTPException(status_code=412,
-    #                            detail="Precondition Failed: The server only provides JSON results, so the 'Accept' header should be set to 'application/json'!")
 
     # then, deal with the various GET and POST operations
     if request.method == "GET":
@@ -393,6 +391,10 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
     if request.method == "POST":
         logger.debug(f"Request method is: POST")
         # now, only accept the two POST options as defined in section 2.1 of the SPARQL 1.1 protocol
+        if 'content-type' not in request.headers.keys():
+            logger.debug("Bad Request: You MUST provide a valid Content-Type!")
+            raise HTTPException(status_code=400,
+                                detail="Bad Request: You MUST provide a valid Content-Type!")
         # first, handle the "query via POST directly" option
         if request.headers['Content-Type'] == "application/sparql-query":
             # an "Unencoded SPARQL query string" should be in the body of the request

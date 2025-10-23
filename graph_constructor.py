@@ -184,7 +184,7 @@ def showPattern(triples: list, nm: NamespaceManager, type: str):
         for element in triple:
             #bound_triple += element.n3(namespace_manager = nm) + " "
             bound_triple += element.n3(namespace_manager = nm) + " "
-        bound_triple += "\n"
+        #bound_triple += "\n"
         pattern += bound_triple
     logger.info(f"Derived the following {type} graph pattern from the query:\n{pattern}")
 
