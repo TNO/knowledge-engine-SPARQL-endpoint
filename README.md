@@ -1,10 +1,10 @@
 # Knowledge Engine SPARQL Endpoint
 
-The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint provides the POST query operations as defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). In addition, the endpoint also provides query operations that return knowledge gaps in case the query cannot be answered. See section 'Endpoint routes specification'.
+The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint provides the GET and the two POST query operations as defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). In addition, the endpoint also provides query operations that return knowledge gaps in case the query cannot be answered. See section 'Endpoint routes specification'.
 
 IMPORTANT!!!
 
-In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
+In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of a Basic Graph Pattern and FILTER, OPTIONAL and/or BIND constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
 
 ## Configuration
 
@@ -127,20 +127,20 @@ Once the endpoint is up and running, it will connect to the provided Knowledge N
 
 ### Token enabled
 
-When the endpoint has been started with tokens enabled, each endpoint route expects a token to be provided as a 'path parameter' of the operation on the endpoint. 
+When the endpoint has been started with tokens enabled, each endpoint route expects a token to be provided as a `path parameter` of the operation on the endpoint. 
 
-So, when the endpoint has been deployed on the localhost at port 8000, the token, e.g. '1234' should be added to the URL as follows:
+So, when the endpoint has been deployed on the localhost at port 8000, the token, e.g. `1234` should be added to the URL as follows:
 
 `http://localhost:8000/query/?token=1234`
 
 The provided token will be validated and the requester's identifier will be retrieved from the `tokens_to_requesters.json` file. Subsequently, this requester's identifier will be used in the knowledge network for authorization purposes.
 
-In the specifications below, the assumption is that the endpoint is token enabled. If this is not the case, the 'token' path parameter is not required.
+In the specifications below, the assumption is that the endpoint is token enabled. If this is not the case, the `token` path parameter is not required.
 
 
 ### Basic POST query route
 
-The first route is a basic POST route named `/query/`. This route implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). Although this specification indicates that specific 'default-graph-uri's and/or 'named-graph-uri's can be provided as well, the `/query/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
+The first route is a basic POST route named `/query/`. This route implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). Although this specification indicates that specific `default-graph-uri's` and/or `named-graph-uri's` can be provided as well, the `/query/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
 
 #### Query via POST directly
 
@@ -168,7 +168,7 @@ curl -X 'POST' \
 
 #### Query via URL-encoded POST
 
-With this option, you may send requests via the HTTP POST method by URL encoding the parameters. When using this method, you *must* URL [percent encode](http://www.ietf.org/rfc/rfc3986.txt) all parameters and include them as parameters within the request body via the 'application/x-www-form-urlencoded' media type with the name 'query'. Parameters *must* be separated with the ampersand (&) character. You may include the parameters in any order. The content type header of the HTTP request *must* be set to application/x-www-form-urlencoded. 
+With this option, you may send requests via the HTTP POST method by URL encoding the parameters. When using this method, you *must* URL [percent encode](http://www.ietf.org/rfc/rfc3986.txt) all parameters and include them as parameters within the request body via the `application/x-www-form-urlencoded` media type with the name `query`. Parameters *must* be separated with the ampersand (&) character. You may include the parameters in any order. The content type header of the HTTP request *must* be set to application/x-www-form-urlencoded. 
 
 The query should be compliant to the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/). It will process the query, fire it on the knowledge network and return the results that are compliant with the SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
 
@@ -216,9 +216,9 @@ In both POST query routes, the result of the query will be returned as a SPARQL1
 
 ### Knowledge gaps query route
 
-The second route is also a POST route named `/query-with-gaps/`. This route also implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). However, in contrast to the basic 'query' route, it is meant to act on a knowledge network that is able to return knowledge gaps, i.e. SPARQL1.1 queries for which NO result bindings can be found in the knowledge network. A knowledge gap is a graph pattern that needs to be provided by the knowledge network to be able to answer the query.
+The second route is also a POST route named `/query-with-gaps/`. This route also implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). However, in contrast to the basic `/query/` route, it is meant to act on a knowledge network that is able to return knowledge gaps, i.e. SPARQL1.1 queries for which NO result bindings can be found in the knowledge network. A knowledge gap is a graph pattern that needs to be provided by the knowledge network to be able to answer the query.
 
-As with the `/query/` route, specific 'default-graph-uri's and/or 'named-graph-uri's can be provided as well, but the `/query-with-gaps/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
+As with the `/query/` route, specific `default-graph-uri's` and/or `named-graph-uri's` can be provided as well, but the `/query-with-gaps/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
 
 The path parameters, query parameters and request body for the `/query-with-gaps/` route are exactly the same as for the `/query/` route.
 
@@ -279,4 +279,4 @@ As the endpoint is implemented as a FastAPI, more documentation of the available
 
 ## Tests
 
-The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. Mature Python unit test files need to be added as well. The current `.py` is an immature first version for this.
+The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. A basic Python unit test file is added as well. The current `.py` is an first version with basic tests that can be further extended in the future.
