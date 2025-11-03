@@ -1,3 +1,4 @@
   {
-    "query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }"
+    "example-query": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }",
+    "example-query-for-gaps": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
   }

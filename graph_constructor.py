@@ -46,8 +46,14 @@ class PrologueNew(Prologue):
 def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabled) -> tuple[Graph, list]:
     
     # first parse the query
-    parsed_query = parseQuery(query)
-
+    try:
+        parsed_query = parseQuery(query)
+    except Exception as e:
+        # create a message that says that only SELECT queries are expected and raise that exception
+        replaceable_string = "Expected {SelectQuery | ConstructQuery | DescribeQuery | AskQuery}"
+        message = str(e).replace(replaceable_string,"Expected SelectQuery")
+        raise Exception(message)
+    
     # then determine whether the query is a SELECT query, because we only accept those!
     if not parsed_query[1].name == "SelectQuery":
         raise Exception(f"Only SELECT queries are supported!")
@@ -70,7 +76,7 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p']['p'], main_graph_pattern, optional_graph_patterns)
     except Exception as e:
         raise Exception(f"Could not derive graph pattern, {e}")
-    logger.info(f"main graph pattern is: {main_graph_pattern}")
+    logger.debug(f"main graph pattern is: {main_graph_pattern}")
     showPattern(main_graph_pattern, prologue.namespace_manager, "main")
     for p in optional_graph_patterns:
         showPattern(p, prologue.namespace_manager, "optional")
@@ -131,7 +137,7 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
                 main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
             else:
                 # it is either a filter_exists or a filter_not_exists
-                raise Exception(f"Unsupported expression {str(algebra['expr']).split('{')[0]} in construct type {type}. Please implement this!")
+                raise Exception(f"Unsupported construct type {str(algebra['expr']).split('{')[0]} in construct type {type}. Please contact the endpoint administrator to implement this!")
         case "Join":
             # both parts should be added to the same main graph pattern
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p2'], main_graph_pattern, optional_graph_patterns)
@@ -151,7 +157,7 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
             # the group contains a part p that should be further processed
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
         case _:
-            raise Exception(f"Unsupported construct type {type}. Please implement this!")
+            raise Exception(f"Unsupported construct type {type}. Please contact the endpoint administrator to implement this!")
 
     return main_graph_pattern, optional_graph_patterns
 
@@ -178,7 +184,7 @@ def showPattern(triples: list, nm: NamespaceManager, type: str):
         for element in triple:
             #bound_triple += element.n3(namespace_manager = nm) + " "
             bound_triple += element.n3(namespace_manager = nm) + " "
-        bound_triple += "\n"
+        #bound_triple += "\n"
         pattern += bound_triple
     logger.info(f"Derived the following {type} graph pattern from the query:\n{pattern}")
 
