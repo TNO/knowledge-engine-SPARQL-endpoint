@@ -137,7 +137,7 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
                 main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
             else:
                 # it is either a filter_exists or a filter_not_exists
-                raise Exception(f"Unsupported expression {str(algebra['expr']).split('{')[0]} in construct type {type}. Please implement this!")
+                raise Exception(f"Unsupported construct type {str(algebra['expr']).split('{')[0]} in construct type {type}. Please contact the endpoint administrator to implement this!")
         case "Join":
             # both parts should be added to the same main graph pattern
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p2'], main_graph_pattern, optional_graph_patterns)
@@ -157,7 +157,7 @@ def deriveGraphPatterns(algebra: dict, main_graph_pattern: list, optional_graph_
             # the group contains a part p that should be further processed
             main_graph_pattern, optional_graph_patterns = deriveGraphPatterns(algebra['p'], main_graph_pattern, optional_graph_patterns)
         case _:
-            raise Exception(f"Unsupported construct type {type}. Please implement this!")
+            raise Exception(f"Unsupported construct type {type}. Please contact the endpoint administrator to implement this!")
 
     return main_graph_pattern, optional_graph_patterns
 

@@ -282,14 +282,14 @@ async def get(request: Request) -> SPARQLResultResponse:
     if body != "":
         logger.debug("Bad Request: You MUST NOT provide a message body!")
         raise HTTPException(status_code=400,
-                            detail="Bad Request: You MUST NOT provide a message body!")
+                            detail="You MUST NOT provide a message body!")
     # get the query out of request
     try:
         query = request.query_params['query']
     except:
         logger.debug("Bad Request: You should provide a URL-encoded query as a query string parameter!")
         raise HTTPException(status_code=400,
-                            detail="Bad Request: You should provide a URL-encoded query as a query string parameter!")
+                            detail="You should provide a URL-encoded query as a query string parameter!")
 
     # then get the requester_id and query string
     requester_id, query = process_request_message_and_get_request_and_query(request, query)
@@ -377,7 +377,7 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
     if 'accept' in request.headers.keys() and request.headers['accept'] != "application/json":
         logger.debug("Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
         raise HTTPException(status_code=412,
-                            detail="Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
+                            detail="When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
 
     # then, deal with the various GET and POST operations
     if request.method == "GET":
@@ -386,7 +386,7 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
         if 'content-type' in request.headers.keys():
             logger.debug("Bad Request: You MUST NOT provide a Content-Type!")
             raise HTTPException(status_code=400,
-                                detail="Bad Request: You MUST NOT provide a Content-Type!")
+                                detail="You MUST NOT provide a Content-Type!")
         
     if request.method == "POST":
         logger.debug(f"Request method is: POST")
@@ -394,7 +394,7 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
         if 'content-type' not in request.headers.keys():
             logger.debug("Bad Request: You MUST provide a valid Content-Type!")
             raise HTTPException(status_code=400,
-                                detail="Bad Request: You MUST provide a valid Content-Type!")
+                                detail="You MUST provide a valid Content-Type!")
         # first, handle the "query via POST directly" option
         if request.headers['Content-Type'] == "application/sparql-query":
             # an "Unencoded SPARQL query string" should be in the body of the request
@@ -402,22 +402,31 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
         
         # second, handle the "query via URL-encoded POST" option
         elif request.headers['Content-Type'] == "application/x-www-form-urlencoded":
-            # the body should contain a URL-encoded parameter "query", optionally ampersand separated with other parameters
+            # the body should contain a parameter "query" with a URL-encoded query, optionally ampersand separated with other parameters
             try:
+                logger.info(f"raw query received is: {query}")
                 parameters = query.decode().split("&")
+                logger.info(f"parameters is: {parameters}")
                 parameter_list = {p.split("=",1)[0] : p.split("=",1)[1] for p in parameters}
+                logger.info(f"parameter_list is: {parameter_list}")
                 query = parameter_list['query']
-                query = urllib.parse.unquote(query)
             except:
                 logger.debug("Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
                 raise HTTPException(status_code=400,
-                                    detail="Bad Request: You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
+                                    detail="You must provide a URL-encoded body parameter called 'query' that contains the SPARQL query!")
+            # check whether the query is URL-encoded, now very simple by checking whether there is a space in the string
+            if ' ' in query:
+                logger.debug("Bad Request: You must provide a URL-encoded SPARQL query!")
+                raise HTTPException(status_code=400,
+                                detail="You must provide a URL-encoded SPARQL query!")
+            else: 
+                query = urllib.parse.unquote(query)
             
         # all other options should not be accepted
         else:
             logger.debug("Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
             raise HTTPException(status_code=415,
-                                detail="Unsupported Media Type: the Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
+                                detail="The Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'")
 
     logger.info(f"SPARQL Query is: {query}")
 
@@ -431,9 +440,9 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
     try:
         knowledge_network.check_knowledge_base_existence(requester_id)
     except Exception as e:
-        logger.debug(f"An unexpected error occurred: {e}")
+        logger.debug(f"An unexpected error in requester knowledge base occurred: {e}")
         raise HTTPException(status_code=500,
-                            detail=f"An unexpected error occurred: {e}")
+                            detail=f"An unexpected error in requester knowledge base occurred: {e}")
 
     # take the query and build a graph with bindings from the knowledge network needed to satisfy the query
     try:

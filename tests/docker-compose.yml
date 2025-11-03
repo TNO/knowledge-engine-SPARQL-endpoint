@@ -26,17 +26,30 @@ services:
         }
       GRAPH_PATTERN: |
         ?event ex:hasOccurredAt ?datetime .
+        ?event ex:hasNumberOfPeople ?people .
       KB_DATA: |
         [
           {
+            "event": "<http://example.org/BiggestClimateStrikes>",
+            "datetime": "\"2019-09-20T09:00:00Z\"^^xsd:dateTime",
+            "people": 7600000
+          },
+          {
             "event": "<http://example.org/FirstLandingOnTheMoon>",
-            "datetime": "\"1969-07-20T20:05:00Z\"^^xsd:dateTime"
+            "datetime": "\"1969-07-20T20:05:00Z\"^^xsd:dateTime",
+            "people": 500
+          },
+          {
+            "event": "<http://example.org/IntroductionOfTheEuro>",
+            "datetime": "\"2002-01-01T00:00:00Z\"^^xsd:dateTime",
+            "people": 100
           }
         ]
 
-  # Another KB is added to react to posts about main historic events and whom was involved
+
+  # Another KB is added to answer questions about persons involved in historic events
   persons-involved-kb:
-    build: ./knowledge-network/react_kb
+    build: ./knowledge-network/answering_kb
     environment:
       KE_URL: http://kbs-runtime:8280/rest
       KB_ID: http://example.org/a-persons-involved-knowledge-base-id
@@ -44,14 +57,38 @@ services:
         {
           "ex": "http://example.org/"
         }
-      ARGUMENT_GRAPH_PATTERN: |
-        ?event a ex:MainHistoricEvent .
-      RESULT_GRAPH_PATTERN: |
+      GRAPH_PATTERN: |
         ?event ex:mainPersonsInvolved ?person .
       KB_DATA: |
         [
           {
             "event": "<http://example.org/FirstLandingOnTheMoon>",
             "person": "<http://example.org/Neil_Armstrong>"
+          },
+          {
+            "event": "<http://example.org/BiggestClimateStrikes>",
+            "person": "<http://example.org/Greta_Thunberg>"
+          }
+        ]
+
+  # Another KB is added to react to posts about main historic events and where they took place
+  main-historic-event-locations-kb:
+    build: ./knowledge-network/react_kb
+    environment:
+      KE_URL: http://kbs-runtime:8280/rest
+      KB_ID: http://example.org/a-main-historic-event-locations-knowledge-base-id
+      PREFIXES: |
+        {
+          "ex": "http://example.org/"
+        }
+      ARGUMENT_GRAPH_PATTERN: |
+        ?event a ex:MainHistoricEvent .
+      RESULT_GRAPH_PATTERN: |
+        ?event ex:occurredAtLocation ?location .
+      KB_DATA: |
+        [
+          {
+            "event": "<http://example.org/FirstLandingOnTheMoon>",
+            "location": "<http://example.org/Moon>"
           }
         ]

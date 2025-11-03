@@ -4,7 +4,7 @@ The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 
 
 IMPORTANT!!!
 
-In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of Basic Graph Pattern, Filter and Optional constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
+In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of a Basic Graph Pattern and FILTER, OPTIONAL and/or BIND constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
 
 ## Configuration
 
@@ -279,4 +279,4 @@ As the endpoint is implemented as a FastAPI, more documentation of the available
 
 ## Tests
 
-The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. Mature Python unit test files need to be added as well. The current `.py` is an immature first version for this.
+The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. A basic Python unit test file is added as well. The current `.py` is an first version with basic tests that can be further extended in the future.
