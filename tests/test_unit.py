@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 client = TestClient(app)
 
 # ASSUMPTIONS:
-# - A knowledge network should up and running
+# - A knowledge network should be up and running
 # - One or more knowledge bases should be running with the correct knowledge
 
 # When testing in terminal, add environment variables to the command:
@@ -199,18 +199,30 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     assert value.startswith("http://example.org/Neil_Armstrong")
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
-
     # check query with VALUES that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
                SELECT * WHERE {
                 ?event ex:hasOccurredAt ?datetime .
-            } VALUES (?event) {(ex:BiggestClimateStrikes)}"""
+                VALUES (?event) {
+                    (ex:BiggestClimateStrikes)
+                    (ex:IntroductionOfTheEuro)
+                }
+                OPTIONAL { ?event ex:mainPersonsInvolved ?person }
+                VALUES (?person) {
+                    (ex:Greta_Thunberg)
+                    (ex:Neil_Armstrong)
+                }
+                OPTIONAL { ?event ex:hasNumberOfPeople ?people }
+            }"""
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/BiggestClimateStrikes")
     logger.info("\n")
+
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with DISTINCT that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
@@ -220,7 +232,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -231,7 +243,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with UNION that is not yet allowed
@@ -244,7 +256,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER EXISTS that should give correct results 
@@ -256,7 +268,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER NOT EXISTS that should give correct results 
@@ -268,7 +280,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     logger.info("Query test successful!\n")
@@ -430,17 +442,29 @@ def test_post_query_unencoded_in_body_without_token():
     assert value.startswith("http://example.org/Neil_Armstrong")
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
-
-    # check query with VALUES that is not yet allowed
+    # check query with VALUES that should give correct results
     query = """PREFIX ex: <http://example.org/>
                SELECT * WHERE {
                 ?event ex:hasOccurredAt ?datetime .
-            } VALUES (?event) {(ex:BiggestClimateStrikes)}"""
+                VALUES (?event) {
+                    (ex:BiggestClimateStrikes)
+                    (ex:IntroductionOfTheEuro)
+                }
+                OPTIONAL { ?event ex:mainPersonsInvolved ?person }
+                VALUES (?person) {
+                    (ex:Greta_Thunberg)
+                    (ex:Neil_Armstrong)
+                }
+                OPTIONAL { ?event ex:hasNumberOfPeople ?people }
+            }"""
     response = client.post("/query/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/BiggestClimateStrikes")
     logger.info("\n")
+
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with DISTINCT that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
@@ -449,7 +473,7 @@ def test_post_query_unencoded_in_body_without_token():
             }"""
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -459,7 +483,7 @@ def test_post_query_unencoded_in_body_without_token():
             } LIMIT 1"""
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with UNION that is not yet allowed
@@ -471,7 +495,7 @@ def test_post_query_unencoded_in_body_without_token():
             }"""
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER EXISTS that should give correct results 
@@ -482,7 +506,7 @@ def test_post_query_unencoded_in_body_without_token():
             }"""
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER NOT EXISTS that should give correct results 
@@ -493,7 +517,7 @@ def test_post_query_unencoded_in_body_without_token():
             }"""
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     logger.info("Query test successful!\n")
@@ -676,18 +700,30 @@ def test_post_query_URL_encoded_in_body_without_token():
     assert value.startswith("http://example.org/Neil_Armstrong")
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
-
-    # check query with VALUES that is not yet allowed
+    # check query with VALUES that should give correct results
     query = """PREFIX ex: <http://example.org/>
                SELECT * WHERE {
                 ?event ex:hasOccurredAt ?datetime .
-            } VALUES (?event) {(ex:BiggestClimateStrikes)}"""
+                VALUES (?event) {
+                    (ex:BiggestClimateStrikes)
+                    (ex:IntroductionOfTheEuro)
+                }
+                OPTIONAL { ?event ex:mainPersonsInvolved ?person }
+                VALUES (?person) {
+                    (ex:Greta_Thunberg)
+                    (ex:Neil_Armstrong)
+                }
+                OPTIONAL { ?event ex:hasNumberOfPeople ?people }
+            }"""
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/BiggestClimateStrikes")
     logger.info("\n")
+
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with DISTINCT that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
@@ -697,7 +733,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -708,7 +744,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with UNION that is not yet allowed
@@ -721,7 +757,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER EXISTS that should give correct results 
@@ -733,7 +769,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER NOT EXISTS that should give correct results 
@@ -745,7 +781,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     logger.info("Query test successful!\n")
@@ -911,17 +947,23 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     assert value == "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/MainHistoricEvent>"
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
-
     # check query with VALUES that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
                SELECT * WHERE {
                 ?event ex:hasOccurredAt ?datetime .
+                ?event ex:occurredAtLocation ?location .
             } VALUES (?event) {(ex:BiggestClimateStrikes)}"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    assert len(content["results"]["bindings"][0]) == 0
+    value = content["knowledge_gaps"][0]["pattern"]
+    assert "<http://example.org/BiggestClimateStrikes> <http://example.org/occurredAtLocation> ?location ." in value
+    value = content["knowledge_gaps"][0]["gaps"][0][0]
+    assert value == "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/MainHistoricEvent>"
     logger.info("\n")
+
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with DISTINCT that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
@@ -930,7 +972,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
             }"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -940,7 +982,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
             } LIMIT 1"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with UNION that is not yet allowed
@@ -952,7 +994,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
             }"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER EXISTS that should give correct results 
@@ -963,7 +1005,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
             }"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     # check query with FILTER NOT EXISTS that should give correct results 
@@ -974,7 +1016,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
             }"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not derive graph pattern, Unsupported construct type")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
     logger.info("\n")
 
     logger.info("Query test successful!\n")
@@ -983,7 +1025,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
 # do the tests!
 try:
     test_root()
-    #test_check_token_for_each_route()
+    test_check_token_for_each_route()
     test_get_query_URL_encoded_as_parameter_without_token()
     test_post_query_unencoded_in_body_without_token()
     test_post_query_URL_encoded_in_body_without_token()
