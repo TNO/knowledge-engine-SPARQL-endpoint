@@ -92,3 +92,25 @@ services:
             "location": "<http://example.org/Moon>"
           }
         ]
+
+  # Add a test service that runs through a large number of tests on a SPARQL endpoint
+  test-service:
+    build:
+      context: ./
+      additional_contexts:
+        src: ../
+      dockerfile: ./Dockerfile
+    environment:
+      - KNOWLEDGE_ENGINE_URL=http://host.docker.internal:8280/rest
+      - KNOWLEDGE_BASE_ID_PREFIX=https://ke/sparql-endpoint/
+      - TOKEN_ENABLED=False
+      - LOG_LEVEL=DEBUG
+    #healthcheck:
+    #  test: ["CMD", "curl", "-f", "http://:8280/rest/sc"]
+    #  interval: 10s
+    #  timeout: 5s
+    #  retries: 5        
+    #depends_on:
+    #  daikin-km:
+    #    condition: 
+
