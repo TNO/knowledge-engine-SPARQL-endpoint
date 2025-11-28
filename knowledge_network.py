@@ -4,6 +4,7 @@ import requests
 import uuid
 import logging
 import logging_config as lc
+import time
 
 # graph imports
 import rdflib
@@ -71,6 +72,7 @@ def create_knowledge_base(kb_id: str) -> KnowledgeBase:
 
 # add a dummy KB and delete it again to start the KE runtime
 dummy_kb = create_knowledge_base(KNOWLEDGE_BASE_ID_PREFIX+"dummy")
+time.sleep(1)
 dummy_kb.unregister()
 
 # start an empty dictionary with a mapping between requester_ids and knowledge bases
@@ -95,21 +97,28 @@ def check_knowledge_base_existence(requester_id: str):
         logger.info(f"Knowledge Base for '{requester_id}' already created at the Knowledge Network")
         
         
-def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, gaps_enabled: bool) -> list:
+def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, bindings: list, gaps_enabled: bool) -> list:
     req_kb_id = KNOWLEDGE_BASE_ID_PREFIX+requester_id
+
     # get the requesters' knowledge base
     requester_kb = knowledge_bases[req_kb_id]
+
     # generate an ASK knowledge interaction from the triples
     ki = getKnowledgeInteractionFromTriples(graph_pattern)
+
     # build a registration request for the ASK knowledge interaction
     req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"],knowledge_gaps_enabled=gaps_enabled)
     logger.debug(f'Knowledge interaction registration request is {req}')
+
     # register the ASK knowledge interaction for the knowledge base
     registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
-    # call the knowledge interaction without any bindings
-    answer = registered_ki.ask([{}])
+
+    # call the knowledge interaction with bindings
+    answer = registered_ki.ask(bindings)
+
     # unregister the ASK knowledge interaction for the knowledge base
     unregisterKnowledgeInteraction(req_kb_id, registered_ki.id)
+
     return answer
 
 

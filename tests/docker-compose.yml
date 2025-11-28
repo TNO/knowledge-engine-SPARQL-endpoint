@@ -31,18 +31,18 @@ services:
         [
           {
             "event": "<http://example.org/BiggestClimateStrikes>",
-            "datetime": "\"2019-09-20T09:00:00Z\"^^xsd:dateTime",
-            "people": 7600000
+            "datetime": "\"2019-09-20T09:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>",
+            "people": "\"7600000\"^^<http://www.w3.org/2001/XMLSchema#integer>"
           },
           {
             "event": "<http://example.org/FirstLandingOnTheMoon>",
-            "datetime": "\"1969-07-20T20:05:00Z\"^^xsd:dateTime",
-            "people": 500
+            "datetime": "\"1969-07-20T20:05:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>",
+            "people": "\"500\"^^<http://www.w3.org/2001/XMLSchema#integer>"
           },
           {
             "event": "<http://example.org/IntroductionOfTheEuro>",
-            "datetime": "\"2002-01-01T00:00:00Z\"^^xsd:dateTime",
-            "people": 100
+            "datetime": "\"2002-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>",
+            "people": "\"100\"^^<http://www.w3.org/2001/XMLSchema#integer>"
           }
         ]
 
