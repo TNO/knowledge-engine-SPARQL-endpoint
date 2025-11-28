@@ -9,4 +9,4 @@ pytest
 setuptools
 sparql-parser
 SPARQLWrapper
-knowledge-mapper
+knowledge-mapper==0.0.24

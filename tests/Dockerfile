@@ -15,9 +15,10 @@ RUN pip install -r requirements.txt
 COPY --from=src ./*.py .
 
 # Put the test_unit.py in the /app/tests/ directory
-RUN mkdir /app/tests
-COPY ./test_unit.py /app/tests/.
+RUN mkdir /app/tests/
 
 WORKDIR /app/tests/
+COPY ./test_unit.py .
 
+# extend it with environment variables?
 ENTRYPOINT [ "python", "test_unit.py" ]

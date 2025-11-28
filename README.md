@@ -2,9 +2,29 @@
 
 The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint provides the GET and the two POST query operations as defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). In addition, the endpoint also provides query operations that return knowledge gaps in case the query cannot be answered. See section 'Endpoint routes specification'.
 
-IMPORTANT!!!
+## Supported SPARQL constructs
 
-In the current version, only SPARQL SELECT queries are accepted with a WHERE clause that can contain a combination of a Basic Graph Pattern and FILTER, OPTIONAL and/or BIND constructs. In addition, in the SELECT clause the SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE are allowed also in combination with a GROUP BY clause. Other constructs will be handled in future versions of the endpoint.
+In the current version, only SPARQL SELECT queries are supported.
+
+The WHERE clause can contain the following:
+- Basic Graph Pattern,
+- FILTER
+- OPTIONAL
+- BIND
+- VALUES
+
+The SELECT clause can contain the following:
+- SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE
+- GROUP BY clause after the where clause
+
+Other constructs will be handled in future versions of the endpoint.
+
+IMPORTANT NOTE:
+
+Literals in the query are in the endpoint transformed to the N3 notation. As comparison between literals is done via exact string matching, a literal that is asked for in the SELECT query, should be available in the knowledge network in the N3 notation as well.
+
+One specific situation concerns the usage of time zones in `xsd:dateTime` literals. The usage of the `Z` notation is not well supported by the `rdflib` package, so time zones should be given in offset notation, i.e. `+00:00`, `+01:00`, `-01:00`, etc.
+
 
 ## Configuration
 
