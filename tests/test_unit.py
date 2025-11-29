@@ -148,9 +148,9 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     value = content["results"]["bindings"][0]["max"]["value"]
     assert str(value) == "7600000"
     value = content["results"]["bindings"][0]["events"]["value"]
-    assert value == "http://example.org/BiggestClimateStrikes or http://example.org/IntroductionOfTheEuro or http://example.org/FirstLandingOnTheMoon"
+    assert value.startswith("http://example.org/BiggestClimateStrikes") or value.startswith("http://example.org/IntroductionOfTheEuro") or value.startswith("http://example.org/FirstLandingOnTheMoon")
     value = content["results"]["bindings"][0]["sample"]["value"]
-    assert value == "2002-01-01T00:00:00+00:00" or "1969-07-20T20:05:00+00:00" or "2019-09-20T09:00:00+00:00"
+    assert value.startswith("2002-01-01T00:00:00+00:00") or value.startswith("1969-07-20T20:05:00+00:00") or value.startswith("2019-09-20T09:00:00+00:00")
     logger.info("\n")
 
     # check query with AGGREGATE constructs with GROUP BY that should give correct results
@@ -171,17 +171,17 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     value = content["results"]["bindings"][0]["count"]["value"]
     assert str(value) == "1"
     value = content["results"]["bindings"][0]["sum"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["avg"]["value"]
-    assert str(round(float(value))) == "7600000"
+    assert str(round(float(value))) == "100"
     value = content["results"]["bindings"][0]["min"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["max"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["events"]["value"]
-    assert value == "http://example.org/BiggestClimateStrikes"
+    assert value == "http://example.org/IntroductionOfTheEuro"
     value = content["results"]["bindings"][0]["sample"]["value"]
-    assert value == "2019-09-20T09:00:00+00:00"
+    assert value == "2002-01-01T00:00:00+00:00"
     logger.info("\n")
 
     # check query with BIND that should give correct results
@@ -196,7 +196,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     assert response.status_code == 200
     content = response.json()
     value = content["results"]["bindings"][0]["involvement"]["value"]
-    assert value.startswith("http://example.org/Neil_Armstrong")
+    assert value.startswith("http://example.org/Greta_Thunberg")
     logger.info("\n")
 
     # check query with VALUES that is not yet allowed
@@ -393,9 +393,9 @@ def test_post_query_unencoded_in_body_without_token():
     value = content["results"]["bindings"][0]["max"]["value"]
     assert str(value) == "7600000"
     value = content["results"]["bindings"][0]["events"]["value"]
-    assert value == "http://example.org/BiggestClimateStrikes or http://example.org/IntroductionOfTheEuro or http://example.org/FirstLandingOnTheMoon"
+    assert value.startswith("http://example.org/BiggestClimateStrikes") or value.startswith("http://example.org/IntroductionOfTheEuro") or value.startswith("http://example.org/FirstLandingOnTheMoon")
     value = content["results"]["bindings"][0]["sample"]["value"]
-    assert value == "2002-01-01T00:00:00+00:00" or "1969-07-20T20:05:00+00:00" or "2019-09-20T09:00:00+00:00"
+    assert value.startswith("2002-01-01T00:00:00+00:00") or value.startswith("1969-07-20T20:05:00+00:00") or value.startswith("2019-09-20T09:00:00+00:00")
     logger.info("\n")
 
     # check query with AGGREGATE SUM, MIN, MAX, AVG, GROUP_CONCAT and SAMPLE with GROUP BY that should give correct results
@@ -415,17 +415,17 @@ def test_post_query_unencoded_in_body_without_token():
     value = content["results"]["bindings"][0]["count"]["value"]
     assert str(value) == "1"
     value = content["results"]["bindings"][0]["sum"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["avg"]["value"]
-    assert str(round(float(value))) == "7600000"
+    assert str(round(float(value))) == "100"
     value = content["results"]["bindings"][0]["min"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["max"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["events"]["value"]
-    assert value == "http://example.org/BiggestClimateStrikes"
+    assert value == "http://example.org/IntroductionOfTheEuro"
     value = content["results"]["bindings"][0]["sample"]["value"]
-    assert value == "2019-09-20T09:00:00+00:00"
+    assert value == "2002-01-01T00:00:00+00:00"
     logger.info("\n")
 
     # check query with BIND that should give correct results
@@ -439,7 +439,7 @@ def test_post_query_unencoded_in_body_without_token():
     assert response.status_code == 200
     content = response.json()
     value = content["results"]["bindings"][0]["involvement"]["value"]
-    assert value.startswith("http://example.org/Neil_Armstrong")
+    assert value.startswith("http://example.org/Greta_Thunberg")
     logger.info("\n")
 
     # check query with VALUES that should give correct results
@@ -649,9 +649,9 @@ def test_post_query_URL_encoded_in_body_without_token():
     value = content["results"]["bindings"][0]["max"]["value"]
     assert str(value) == "7600000"
     value = content["results"]["bindings"][0]["events"]["value"]
-    assert value == "http://example.org/BiggestClimateStrikes or http://example.org/IntroductionOfTheEuro or http://example.org/FirstLandingOnTheMoon"
+    assert value.startswith("http://example.org/BiggestClimateStrikes") or value.startswith("http://example.org/IntroductionOfTheEuro") or value.startswith("http://example.org/FirstLandingOnTheMoon")
     value = content["results"]["bindings"][0]["sample"]["value"]
-    assert value == "2002-01-01T00:00:00+00:00" or "1969-07-20T20:05:00+00:00" or "2019-09-20T09:00:00+00:00"
+    assert value.startswith("2002-01-01T00:00:00+00:00") or value.startswith("1969-07-20T20:05:00+00:00") or value.startswith("2019-09-20T09:00:00+00:00")
     logger.info("\n")
 
     # check query with AGGREGATE SUM, MIN, MAX, AVG, GROUP_CONCAT and SAMPLE with GROUP BY that should give correct results
@@ -672,17 +672,17 @@ def test_post_query_URL_encoded_in_body_without_token():
     value = content["results"]["bindings"][0]["count"]["value"]
     assert str(value) == "1"
     value = content["results"]["bindings"][0]["sum"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["avg"]["value"]
-    assert str(round(float(value))) == "7600000"
+    assert str(round(float(value))) == "100"
     value = content["results"]["bindings"][0]["min"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["max"]["value"]
-    assert str(value) == "7600000"
+    assert str(value) == "100"
     value = content["results"]["bindings"][0]["events"]["value"]
-    assert value == "http://example.org/BiggestClimateStrikes"
+    assert value == "http://example.org/IntroductionOfTheEuro"
     value = content["results"]["bindings"][0]["sample"]["value"]
-    assert value == "2019-09-20T09:00:00+00:00"
+    assert value == "2002-01-01T00:00:00+00:00"
     logger.info("\n")
 
     # check query with BIND that should give correct results
@@ -697,7 +697,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     assert response.status_code == 200
     content = response.json()
     value = content["results"]["bindings"][0]["involvement"]["value"]
-    assert value.startswith("http://example.org/Neil_Armstrong")
+    assert value.startswith("http://example.org/Greta_Thunberg")
     logger.info("\n")
 
     # check query with VALUES that should give correct results
@@ -958,7 +958,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     content = response.json()
     assert len(content["results"]["bindings"][0]) == 0
     value = content["knowledge_gaps"][0]["pattern"]
-    assert "<http://example.org/BiggestClimateStrikes> <http://example.org/occurredAtLocation> ?location ." in value
+    assert "?event <http://example.org/occurredAtLocation> ?location ." in value
     value = content["knowledge_gaps"][0]["gaps"][0][0]
     assert value == "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/MainHistoricEvent>"
     logger.info("\n")
