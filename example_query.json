@@ -1,4 +1,5 @@
   {
     "example-query": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }",
-    "example-query-for-gaps": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
+    "example-query-for-gaps": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}",
+    "example-update": "PREFIX ex: <http://example.org/> INSERT { ?event a ex:MainHistoricEvent } WHERE { ?event ex:hasOccurredAt ?datetime VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } }"
   }

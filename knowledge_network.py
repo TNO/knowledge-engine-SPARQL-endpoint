@@ -15,7 +15,7 @@ from knowledge_mapper.tke_client import TkeClient
 from knowledge_mapper.knowledge_base import KnowledgeBaseRegistrationRequest
 from knowledge_mapper.knowledge_base import KnowledgeBase
 from knowledge_mapper import knowledge_interaction
-from knowledge_mapper.knowledge_interaction import AskKnowledgeInteractionRegistrationRequest
+from knowledge_mapper.knowledge_interaction import AskKnowledgeInteractionRegistrationRequest, PostKnowledgeInteractionRegistrationRequest
 from knowledge_mapper.tke_exceptions import UnexpectedHttpResponseError
 
 ####################
@@ -104,7 +104,7 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, binding
     requester_kb = knowledge_bases[req_kb_id]
 
     # generate an ASK knowledge interaction from the triples
-    ki = getKnowledgeInteractionFromTriples(graph_pattern)
+    ki = getAskKnowledgeInteractionFromTriples(graph_pattern)
 
     # build a registration request for the ASK knowledge interaction
     req = AskKnowledgeInteractionRegistrationRequest(pattern=ki["pattern"],knowledge_gaps_enabled=gaps_enabled)
@@ -122,11 +122,44 @@ def askPatternAtKnowledgeNetwork(requester_id: str, graph_pattern: list, binding
     return answer
 
 
-def getKnowledgeInteractionFromTriples(triples: list) -> dict:
+def postPatternAtKnowledgeNetwork(requester_id: str, argument_graph_pattern: list, bindings: list) -> list:
+    req_kb_id = KNOWLEDGE_BASE_ID_PREFIX+requester_id
+
+    # get the requesters' knowledge base
+    requester_kb = knowledge_bases[req_kb_id]
+
+    # generate an POST knowledge interaction from the triples
+    ki = getPostKnowledgeInteractionFromTriples(argument_graph_pattern)
+
+    # build a registration request for the POST knowledge interaction
+    req = PostKnowledgeInteractionRegistrationRequest(argument_pattern=ki["argument_pattern"],result_pattern=None)
+    logger.debug(f'Knowledge interaction registration request is {req}')
+
+    # register the POST knowledge interaction for the knowledge base
+    registered_ki = requester_kb.register_knowledge_interaction(req, name=ki['name'])
+
+    # call the knowledge interaction with bindings
+    answer = registered_ki.post(bindings)
+
+    # unregister the POST knowledge interaction for the knowledge base
+    unregisterKnowledgeInteraction(req_kb_id, registered_ki.id)
+
+    return answer
+
+
+def getAskKnowledgeInteractionFromTriples(triples: list) -> dict:
     knowledge_interaction = {
       "name": "sparql-query-ask-"+str(uuid.uuid1()),
     }
     knowledge_interaction["pattern"] = convertTriplesToPattern(triples)
+    return knowledge_interaction
+
+
+def getPostKnowledgeInteractionFromTriples(triples: list) -> dict:
+    knowledge_interaction = {
+      "name": "sparql-query-post-"+str(uuid.uuid1()),
+    }
+    knowledge_interaction["argument_pattern"] = convertTriplesToPattern(triples)
     return knowledge_interaction
 
 
