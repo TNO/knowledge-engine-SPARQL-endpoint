@@ -1066,18 +1066,9 @@ def test_post_update_unencoded_in_body_without_token():
              }"""
     response = client.post("/update/", data=update, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Expected correct INSERT update request")
+    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Could not decompose update request to get INSERT or WHERE graph pattern")
     logger.info("\n")
     
-    # check INSERT DATA update request which is not allowed
-    update = """PREFIX ex: <http://example.org/> 
-                INSERT DATA { ex:ExtinctionOfHumans a ex:MainHistoricEvent }
-             """
-    response = client.post("/update/", data=update, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Expected correct INSERT update request")
-    logger.info("\n")
-
     # check INSERT update request without WHERE clause which is not allowed
     update = """PREFIX ex: <http://example.org/> 
                 INSERT { ex:ExtinctionOfHumans a ex:MainHistoricEvent }
@@ -1096,7 +1087,17 @@ def test_post_update_unencoded_in_body_without_token():
              }"""
     response = client.post("/update/", data=update, headers=headers)
     assert response.status_code == 200
-    assert response.json() == "Update succeeded"
+    assert response.json() == "Insert pattern was successfully posted to the knowledge network!"
+    logger.info("\n")
+
+    # check INSERT DATA update that should be processed correctly
+    update = """PREFIX ex: <http://example.org/> 
+                INSERT DATA { ex:ExtinctionOfHumans a ex:MainHistoricEvent }
+             """
+    response = client.post("/update/", data=update, headers=headers)
+    assert response.status_code == 200
+    assert response.json() == "Insert pattern was successfully posted to the knowledge network!"
+    logger.info("\n")
 
     logger.info("Query test successful!\n")
 

@@ -15,7 +15,7 @@ import urllib
 
 # import other py's from this repository
 import local_query_executor
-import graph_constructor
+import request_processor
 import knowledge_network
 import ttp_client
 
@@ -40,11 +40,13 @@ try:
         queries = json.load(f)
         EXAMPLE_QUERY = queries['example-query']
         EXAMPLE_QUERY_FOR_GAPS = queries['example-query-for-gaps']
-        EXAMPLE_UPDATE = queries['example-update']
+        EXAMPLE_UPDATE_INSERT_WHERE = queries['example-update-insert-where']
+        EXAMPLE_UPDATE_INSERT_DATA = queries['example-update-insert-data']
 except:
     EXAMPLE_QUERY = "SELECT * WHERE {?event <http://example.org/hasOccurredAt> ?datetime .}"
     EXAMPLE_QUERY_FOR_GAPS = "SELECT * WHERE {?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
-    EXAMPLE_UPDATE = "INSERT { ?event a <http://example.org/MainHistoricEvent> } WHERE { ?event ex:hasOccurredAt ?datetime VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } "
+    EXAMPLE_UPDATE_INSERT_WHERE = "INSERT { ?event a <http://example.org/MainHistoricEvent> } WHERE { ?event <http://example.org/hasOccurredAt> ?datetime VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) }"
+    EXAMPLE_UPDATE_INSERT_DATA = "INSERT DATA { <http://example.org/ExtinctionOfHumans> a <http://example.org/MainHistoricEvent> }"
 
 if "TOKEN_ENABLED" in os.environ:
     TOKEN_ENABLED = os.getenv("TOKEN_ENABLED")
@@ -141,7 +143,7 @@ OPENAPI_POST_UPDATE_BODY = {
     "requestBody": {
         "content": {
             "application/sparql-update": {
-                "schema": {"type": "string", "example": f"{EXAMPLE_UPDATE}"},
+                "schema": {"type": "string", "example": f"{EXAMPLE_UPDATE_INSERT_DATA}"},
                 },
             "application/x-www-form-urlencoded": {
                 "schema": {
@@ -149,7 +151,7 @@ OPENAPI_POST_UPDATE_BODY = {
                     "properties": {
                         "update": {
                             "type": "string",
-                            "example": f"{EXAMPLE_UPDATE}",
+                            "example": f"{EXAMPLE_UPDATE_INSERT_WHERE}",
                             },
                         }
                     },
@@ -302,8 +304,6 @@ async def root():
         openapi_extra = OPENAPI_EXTRA_GET_REQUEST
         )
 async def get(request: Request) -> SPARQLResultResponse:
-    #logger.info(f"Received GET request /query/ to be handled.")
-    
     # get the body from the request, which should be empty
     body = await request.body()
     body = body.decode()
@@ -344,7 +344,6 @@ async def get(request: Request) -> SPARQLResultResponse:
           openapi_extra = OPENAPI_EXTRA_POST_REQUEST
         )
 async def post(request: Request) -> SPARQLResultResponse:
-    #logger.info(f"Received POST request /query/ to be handled.")
     # get byte query out of request with await
     query = await request.body()
     
@@ -378,7 +377,6 @@ async def post(request: Request) -> SPARQLResultResponse:
           openapi_extra = OPENAPI_EXTRA_POST_REQUEST_FOR_GAPS
         )
 async def post(request: Request) -> SPARQLResultWithGapsResponse:
-    #logger.info(f"Received POST request /query-with-gaps/ to be handled.")
     # get byte query out of request with await
     query = await request.body()
     # then get the requester_id and query string
@@ -405,7 +403,6 @@ async def post(request: Request) -> SPARQLResultWithGapsResponse:
           openapi_extra = OPENAPI_EXTRA_POST_UPDATE
         )
 async def post(request: Request):
-    logger.info(f"Received POST request /update/ to be handled.")
     # get byte request out of update request with await
     update = await request.body()
     
@@ -535,7 +532,7 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
 
     # take the query and build a graph with bindings from the knowledge network needed to satisfy the query
     try:
-        graph, knowledge_gaps = graph_constructor.constructGraphFromKnowledgeNetwork(query, requester_id, gaps_enabled)
+        graph, knowledge_gaps = request_processor.constructGraphFromKnowledgeNetwork(query, requester_id, gaps_enabled)
     except Exception as e:
         logger.debug(f"Query could not be processed by the endpoint: {e}")
         raise HTTPException(status_code=400,
@@ -571,7 +568,7 @@ def handle_update(requester_id: str, update: str, gaps_enabled):
 
     # take the update and decompose it
     try:
-        update_decomposition = graph_constructor.checkAndDecomposeUpdate(update)
+        update_decomposition = request_processor.checkAndDecomposeUpdate(update)
     except Exception as e:
         logger.debug(f"Update request could not be processed by the endpoint: {e}")
         raise HTTPException(status_code=400,
@@ -579,7 +576,7 @@ def handle_update(requester_id: str, update: str, gaps_enabled):
         
     # fire the update on the knowledge network
     try:
-        answer = graph_constructor.executeUpdateOnKnowledgeNetwork(update_decomposition, requester_id, gaps_enabled)
+        answer = request_processor.executeUpdateOnKnowledgeNetwork(update_decomposition, requester_id, gaps_enabled)
     except Exception as e:
         logger.debug(f"Failed to execute the update request: {e}")
         raise HTTPException(status_code=500,

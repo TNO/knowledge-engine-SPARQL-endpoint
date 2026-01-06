@@ -27,11 +27,9 @@ One specific situation concerns the usage of time zones in `xsd:dateTime` litera
 
 ## Supported SPARQL update requests
 
-To accept SPARQL update requests, the endpoint provides the two POST update operations as defined by the [SPARQL 1.1 Protocol update specification](https://www.w3.org/TR/sparql11-protocol#update-operation). 
+To accept SPARQL update requests, the endpoint provides the two POST update operations as defined by the [SPARQL 1.1 Protocol update specification](https://www.w3.org/TR/sparql11-protocol#update-operation). In the current version, only the INSERT DATA operation and the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) are supported. 
 
-In the current version, only the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) is supported. This is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied.
-
-Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
+The INSERT DATA operation accepts only triples without variables, while the INSERT operation is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
 
 ## Configuration
 
@@ -268,16 +266,17 @@ The update operations are provided via a POST route named `/update/`. This route
 
 With this option, you may send protocol requests via the HTTP POST method by including the update directly and unencoded as the HTTP request message body. When using this route, you *must* include the SPARQL update request string, unencoded, and nothing else as the message body of the request. You *must* set the content type header of the HTTP request to `application/sparql-update`.
 
-The request should be compliant with the [SPARQL1.1 update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In the current version, only the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) is supported. This is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
+The request should be compliant with the [SPARQL1.1 update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In the current version, only the INSERT DATA operation and the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) are supported. The INSERT DATA operation accepts only triples without variables, while the INSERT operation is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
 
-So, when the endpoint has been deployed on the localhost at port 8000, an unencoded update request should be provided via the route as follows:
+So, when the endpoint has been deployed on the localhost at port 8000, an unencoded INSERT DATA update request should be provided via the route as follows:
 
 `http://localhost:8000/update/?token=1234`
 
 with the update request in the request body as follows:
 
 ```
-INSERT { ?event a <http://example.org/MainHistoricEvent> } WHERE { ?event <http://example.org/hasOccurredAt> ?datetime VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } }
+INSERT DATA { <http://example.org/ExtinctionOfHumans> a <http://example.org/MainHistoricEvent> }
+
 ```
 
 or via a `curl` call:
@@ -286,16 +285,16 @@ or via a `curl` call:
 curl -X 'POST' \
   'http://localhost:8000/update/?token=1234' \
   -H 'Content-Type: application/sparql-update' \
-  -d 'INSERT { ?event a <http://example.org/MainHistoricEvent> } WHERE { ?event <http://example.org/hasOccurredAt> ?datetime VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } }'
+  -d 'INSERT DATA { <http://example.org/ExtinctionOfHumans> a <http://example.org/MainHistoricEvent> }'
 ```
 
 #### Update via URL-encoded POST
 
 With this option, you may send requests via the HTTP POST method by URL encoding the parameters. When using this method, you *must* URL [percent encode](http://www.ietf.org/rfc/rfc3986.txt) all parameters and include them as parameters within the request body via the `application/x-www-form-urlencoded` media type with the name `update`. Parameters *must* be separated with the ampersand (&) character. You may include the parameters in any order. The content type header of the HTTP request *must* be set to `application/x-www-form-urlencoded`. 
 
-The request should be compliant with the [SPARQL1.1 update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In the current version, only the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) is supported. This is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
+The request should be compliant with the [SPARQL1.1 update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In the current version, only the INSERT DATA operation and the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) are supported. The INSERT DATA operation accepts only triples without variables, while the INSERT operation is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
 
-So, when the endpoint has been deployed on the localhost at port 8000, a URL-encoded query should be provided via the route as follows:
+So, when the endpoint has been deployed on the localhost at port 8000, a URL-encoded INSERT WHERE update request should be provided via the route as follows:
 
 ```
 http://localhost:8000/update/?token=1234&
@@ -313,7 +312,7 @@ curl -X 'POST' \
 
 #### Update request results
 
-The update operation will process the request, fire the WHERE clause on the knowledge network and collect the returned bindings. Subsequently, the operation will post the INSERT clause to the knowledge network accompanied by returned bindings. If these steps are taken without any failure, the operation will return an `Update succeeded` message. Otherwise, specific failure responses will be returned as defined in the [SPARQL1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol#update-operation).
+The update operation will process the request, fire the WHERE clause on the knowledge network and collect the returned bindings. Subsequently, the operation will post the INSERT clause to the knowledge network accompanied by returned bindings. If these steps are taken without any failure, the operation will return the message `Insert pattern was successfully posted to the knowledge network!`. Otherwise, specific failure responses will be returned as defined in the [SPARQL1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol#update-operation).
 
 ### Knowledge gaps query route
 
