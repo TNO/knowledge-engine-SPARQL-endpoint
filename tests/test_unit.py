@@ -199,7 +199,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     assert value.startswith("http://example.org/Greta_Thunberg")
     logger.info("\n")
 
-    # check query with VALUES that is not yet allowed
+    # check query with VALUES that should give correct results
     query = """PREFIX ex: <http://example.org/>
                SELECT * WHERE {
                 ?event ex:hasOccurredAt ?datetime .
@@ -311,7 +311,7 @@ def test_post_query_unencoded_in_body_without_token():
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 415
-    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'"
+    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query', 'application/sparql-update' or 'application/x-www-form-urlencoded'"
     logger.info("\n")
 
     # check presence of a query in the body
@@ -549,7 +549,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 415
-    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'"
+    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query', 'application/sparql-update' or 'application/x-www-form-urlencoded'"
     logger.info("\n")
 
     # check presence of a body
@@ -814,7 +814,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 415
-    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query' or 'application/x-www-form-urlencoded'"
+    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query', 'application/sparql-update' or 'application/x-www-form-urlencoded'"
     logger.info("\n")
 
     # check presence of a query in the body
@@ -1022,6 +1022,86 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     logger.info("Query test successful!\n")
 
 
+# Test of post update unencoded in body without token
+def test_post_update_unencoded_in_body_without_token():
+    logger.info("Now testing POST update unencoded in the body without token")
+
+    ### BELOW ARE CHECKS OF THE HEADER AND PARAMETER EXCEPTIONS
+
+    # check exception of the presence of a Content-Type header
+    headers = {}
+    response = client.post("/update/", headers=headers)
+    assert response.status_code == 400
+    assert response.json()['detail'] == "You MUST provide a valid Content-Type!"
+    logger.info("\n")
+
+    # check exception of the correct Content-Type header
+    headers = {"Content-Type": "application/json"}
+    response = client.post("/update/", headers=headers)
+    assert response.status_code == 415
+    assert response.json()['detail'] == "The Content-Type must either be 'application/sparql-query', 'application/sparql-update' or 'application/x-www-form-urlencoded'"
+    logger.info("\n")
+
+    # check presence of an update request in the body
+    headers = {"Content-Type": "application/sparql-update"}
+    response = client.post("/update/", headers=headers)
+    assert response.status_code == 400
+    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Expected correct INSERT update request")
+    logger.info("\n")
+
+    # check presence of a correct update request in the body
+    update = "blabla"
+    headers = {"Content-Type": "application/sparql-update"}
+    response = client.post("/update/", data=update, headers=headers)
+    assert response.status_code == 400
+    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Expected correct INSERT update request")
+    logger.info("\n")
+
+    # check DELETE update request which is not allowed
+    update = """PREFIX ex: <http://example.org/> 
+                DELETE { ?event a ex:MainHistoricEvent }
+                WHERE { 
+                    ?event ex:hasOccurredAt ?datetime 
+                    VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } 
+             }"""
+    response = client.post("/update/", data=update, headers=headers)
+    assert response.status_code == 400
+    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Could not decompose update request to get INSERT or WHERE graph pattern")
+    logger.info("\n")
+    
+    # check INSERT update request without WHERE clause which is not allowed
+    update = """PREFIX ex: <http://example.org/> 
+                INSERT { ex:ExtinctionOfHumans a ex:MainHistoricEvent }
+             """
+    response = client.post("/update/", data=update, headers=headers)
+    assert response.status_code == 400
+    assert response.json()['detail'].startswith("Update request could not be processed by the endpoint: Expected correct INSERT update request")
+    logger.info("\n")
+
+    # check INSERT-WHERE update that should be processed correctly
+    update = """PREFIX ex: <http://example.org/> 
+                INSERT { ?event a ex:MainHistoricEvent }
+                WHERE { 
+                    ?event ex:hasOccurredAt ?datetime 
+                    VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } 
+             }"""
+    response = client.post("/update/", data=update, headers=headers)
+    assert response.status_code == 200
+    assert response.json() == "Insert pattern was successfully posted to the knowledge network!"
+    logger.info("\n")
+
+    # check INSERT DATA update that should be processed correctly
+    update = """PREFIX ex: <http://example.org/> 
+                INSERT DATA { ex:ExtinctionOfHumans a ex:MainHistoricEvent }
+             """
+    response = client.post("/update/", data=update, headers=headers)
+    assert response.status_code == 200
+    assert response.json() == "Insert pattern was successfully posted to the knowledge network!"
+    logger.info("\n")
+
+    logger.info("Query test successful!\n")
+
+
 # do the tests!
 try:
     test_root()
@@ -1030,6 +1110,7 @@ try:
     test_post_query_unencoded_in_body_without_token()
     test_post_query_URL_encoded_in_body_without_token()
     test_post_query_with_gaps_unencoded_in_body_without_token()
+    test_post_update_unencoded_in_body_without_token()
     logger.info(f"All tests were successful!!")
 except:
     logger.info(f"The last test that was checked failed!!")

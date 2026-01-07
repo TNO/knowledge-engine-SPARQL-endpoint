@@ -1,12 +1,12 @@
 # Knowledge Engine SPARQL Endpoint
 
-The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant queries to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint provides the GET and the two POST query operations as defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). In addition, the endpoint also provides query operations that return knowledge gaps in case the query cannot be answered. See section 'Endpoint routes specification'.
+The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant requests to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint supports both SPARQL queries as defined by the [SPARQL1.1 Query specification](https://www.w3.org/TR/2013/REC-sparql11-query-20130321/) and SPARQL update requests as defined by the [SPARQL 1.1 Update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In addition, the endpoint also provides augmented SPARQL 1.1 query operations that return knowledge gaps in case the query cannot be answered by the knowledge network. See section 'Endpoint routes specification'.
 
-## Supported SPARQL constructs
+## Supported SPARQL queries
 
-In the current version, only SPARQL SELECT queries are supported.
+To accept SPARQL queries, the endpoint provides the GET and the two POST query operations as defined by the [SPARQL 1.1 Protocol query operation specification](https://www.w3.org/TR/sparql11-protocol#query-operation). In the current version, only SPARQL SELECT queries are supported.
 
-The WHERE clause can contain the following:
+The WHERE clause can contain the following constructs:
 - Basic Graph Pattern,
 - FILTER
 - OPTIONAL
@@ -25,6 +25,11 @@ Literals in the query are in the endpoint transformed to the N3 notation. As com
 
 One specific situation concerns the usage of time zones in `xsd:dateTime` literals. The usage of the `Z` notation is not well supported by the `rdflib` package, so time zones should be given in offset notation, i.e. `+00:00`, `+01:00`, `-01:00`, etc.
 
+## Supported SPARQL update requests
+
+To accept SPARQL update requests, the endpoint provides the two POST update operations as defined by the [SPARQL 1.1 Protocol update specification](https://www.w3.org/TR/sparql11-protocol#update-operation). In the current version, only the INSERT DATA operation and the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) are supported. 
+
+The INSERT DATA operation accepts only triples without variables, while the INSERT operation is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
 
 ## Configuration
 
@@ -84,7 +89,8 @@ Finally, if the SPARQL endpoint is being deployed for a specific application, sp
 ```
 {
     "example-query": "SELECT * WHERE { ?event <https://example.org/hasOccurredAt> ?datetime . }",
-    "example-query-for-gaps": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}"
+    "example-query-for-gaps": "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . ?event <http://example.org/mainPersonsInvolved> ?person .}",
+    "example-update": "INSERT { ?event a <http://example.org/MainHistoricEvent> } WHERE { ?event ex:hasOccurredAt ?datetime VALUES (?datetime) { ('1969-07-20T20:05:00+00:00'^^<http://www.w3.org/2001/XMLSchema#dateTime>) } "
 }
 ```
 
@@ -157,10 +163,28 @@ The provided token will be validated and the requester's identifier will be retr
 
 In the specifications below, the assumption is that the endpoint is token enabled. If this is not the case, the `token` path parameter is not required.
 
+### Query operations
 
-### Basic POST query route
+The query operations are provided via a POST route named `/query/`. This route implements the GET query option and the two POST query options defined by the [SPARQL1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol#query-operation). Although this specification indicates that specific `default-graph-uri's` and/or `named-graph-uri's` can be provided as well, the `/query/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
 
-The first route is a basic POST route named `/query/`. This route implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). Although this specification indicates that specific `default-graph-uri's` and/or `named-graph-uri's` can be provided as well, the `/query/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
+#### Query via GET
+
+With this option, you may send protocol requests via the HTTP GET method. When using this method, you *must* URL [percent encode](http://www.ietf.org/rfc/rfc3986.txt) all parameters and include them as query string parameters with the name `query`. HTTP query string parameters must be separated with the ampersand (&) character. You may include the query string parameters in any order.
+The HTTP request *must not* include a message body.
+
+The query should be compliant to the [SPARQL1.1 specification](https://www.w3.org/TR/sparql11-query/). It will process the query, fire it on the knowledge network and return the results that are compliant with the SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/)
+
+So, when the endpoint has been deployed on the localhost at port 8000, an unencoded query should be provided via the route as follows:
+
+`http://localhost:8000/query/?token=1234&query=SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }`
+
+or via a `curl` call:
+
+```
+curl -X 'POST' \
+  'http://localhost:8000/query/?token=1234SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }' \
+  -H 'accept: application/json' \
+```
 
 #### Query via POST directly
 
@@ -234,6 +258,62 @@ In both POST query routes, the result of the query will be returned as a SPARQL1
 
 
 
+### Update operations
+
+The update operations are provided via a POST route named `/update/`. This route implements the two POST update options defined by the [SPARQL1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol#update-operation). Although this specification indicates that specific `default-graph-uri's` and/or `named-graph-uri's` can be provided as well, the `/update/` route of this endpoint will not do anything with it as the endpoint does NOT maintain any permanent graphs.
+
+#### Update via POST directly
+
+With this option, you may send protocol requests via the HTTP POST method by including the update directly and unencoded as the HTTP request message body. When using this route, you *must* include the SPARQL update request string, unencoded, and nothing else as the message body of the request. You *must* set the content type header of the HTTP request to `application/sparql-update`.
+
+The request should be compliant with the [SPARQL1.1 update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In the current version, only the INSERT DATA operation and the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) are supported. The INSERT DATA operation accepts only triples without variables, while the INSERT operation is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
+
+So, when the endpoint has been deployed on the localhost at port 8000, an unencoded INSERT DATA update request should be provided via the route as follows:
+
+`http://localhost:8000/update/?token=1234`
+
+with the update request in the request body as follows:
+
+```
+INSERT DATA { <http://example.org/ExtinctionOfHumans> a <http://example.org/MainHistoricEvent> }
+
+```
+
+or via a `curl` call:
+
+```
+curl -X 'POST' \
+  'http://localhost:8000/update/?token=1234' \
+  -H 'Content-Type: application/sparql-update' \
+  -d 'INSERT DATA { <http://example.org/ExtinctionOfHumans> a <http://example.org/MainHistoricEvent> }'
+```
+
+#### Update via URL-encoded POST
+
+With this option, you may send requests via the HTTP POST method by URL encoding the parameters. When using this method, you *must* URL [percent encode](http://www.ietf.org/rfc/rfc3986.txt) all parameters and include them as parameters within the request body via the `application/x-www-form-urlencoded` media type with the name `update`. Parameters *must* be separated with the ampersand (&) character. You may include the parameters in any order. The content type header of the HTTP request *must* be set to `application/x-www-form-urlencoded`. 
+
+The request should be compliant with the [SPARQL1.1 update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In the current version, only the INSERT DATA operation and the INSERT version of the [DELETE/INSERT operation](https://www.w3.org/TR/2013/REC-sparql11-update-20130321#deleteInsert) are supported. The INSERT DATA operation accepts only triples without variables, while the INSERT operation is the fundamental pattern-based INSERT action that consists of a group of triples to be added under the condition of a WHERE clause that needs to be satisfied. Thus, the graph pattern in the INSERT clause should be a Basic Graph Pattern, while the WHERE clause can contain any of the constructs mentioned above that are supported in the SPARQL queries.
+
+So, when the endpoint has been deployed on the localhost at port 8000, a URL-encoded INSERT WHERE update request should be provided via the route as follows:
+
+```
+http://localhost:8000/update/?token=1234&
+update=INSERT%20%7B%20%3Fevent%20a%20%3Chttp%3A%2F%2Fexample.org%2FMainHistoricEvent%3E%20%7D%0AWHERE%20%7B%20%20%3Fevent%20%3Chttp%3A%2F%2Fexample.org%2FhasOccurredAt%3E%20%3Fdatetime%0A%20%20%20%20VALUES%20%28%3Fdatetime%29%20%7B%20%20%28%271969-07-20T20%3A05%3A00%2B00%3A00%27%5E%5E%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23dateTime%3E%29%20%7D%0A%7D%0A
+```
+
+or via a `curl` call:
+
+```
+curl -X 'POST' \
+  'http://localhost:8000/update/?token=1234' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'update=INSERT%20%7B%20%3Fevent%20a%20%3Chttp%3A%2F%2Fexample.org%2FMainHistoricEvent%3E%20%7D%0AWHERE%20%7B%20%20%3Fevent%20%3Chttp%3A%2F%2Fexample.org%2FhasOccurredAt%3E%20%3Fdatetime%0A%20%20%20%20VALUES%20%28%3Fdatetime%29%20%7B%20%20%28%271969-07-20T20%3A05%3A00%2B00%3A00%27%5E%5E%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23dateTime%3E%29%20%7D%0A%7D%0A'
+ ```
+
+#### Update request results
+
+The update operation will process the request, fire the WHERE clause on the knowledge network and collect the returned bindings. Subsequently, the operation will post the INSERT clause to the knowledge network accompanied by returned bindings. If these steps are taken without any failure, the operation will return the message `Insert pattern was successfully posted to the knowledge network!`. Otherwise, specific failure responses will be returned as defined in the [SPARQL1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol#update-operation).
+
 ### Knowledge gaps query route
 
 The second route is also a POST route named `/query-with-gaps/`. This route also implements the two POST query options defined by the [SPARQL 1.1 Protocol specification](https://www.w3.org/TR/sparql11-protocol/#query-operation). However, in contrast to the basic `/query/` route, it is meant to act on a knowledge network that is able to return knowledge gaps, i.e. SPARQL1.1 queries for which NO result bindings can be found in the knowledge network. A knowledge gap is a graph pattern that needs to be provided by the knowledge network to be able to answer the query.
@@ -299,4 +379,4 @@ As the endpoint is implemented as a FastAPI, more documentation of the available
 
 ## Tests
 
-The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. A basic Python unit test file is added as well. The current `.py` is an first version with basic tests that can be further extended in the future.
+The folder called `tests` contains a setup of a knowledge network that can be used for testing the endpoint. A basic Python unit test file is added as well. The current `.py` contains basic tests that can be further extended in the future.
