@@ -87,7 +87,7 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
         
     # decompose the query algebra and get the main BGP pattern, possible OPTIONAL patterns and possible VALUES statements
     try:
-        query_decomposition = decomposeRequest(algebra['p']['p'], RequestDecomposition())
+        query_decomposition = decomposeRequest(algebra['p'], RequestDecomposition())
     except Exception as e:
         raise Exception(f"Could not decompose query to get graph patterns, {e}")
 
@@ -115,7 +115,7 @@ def buildGraphFromDecomposition(graph: Graph,
 
     # first, ask the main graph pattern and add the bindings to the graph
     if len(decomposition.mainPattern) > 0:
-        logger.info('Main graph pattern is being asked from the knowledge network!')
+        logger.info('A main graph pattern is being asked from the knowledge network!')
         try:
             pattern = decomposition.mainPattern
             logger.info(f"Pattern that is asked: {pattern}")
@@ -140,31 +140,28 @@ def buildGraphFromDecomposition(graph: Graph,
         except Exception as e:
             raise Exception(f"An error occurred when contacting the knowledge network: {e}")
         logger.info(f"Knowledge network successfully responded to the main graph pattern!")
-    else:
-        logger.info(f"No main graph pattern is derived from the query, so the result is empty!")
 
     # second, loop over the optional graph patterns and add the bindings to the graph
     try:
-        logger.info('Optional graph patterns are being asked from the knowledge network!')
         for pattern in decomposition.optionalPatterns:
+            logger.info('An optional graph pattern is being asked from the knowledge network!')
             logger.info(f"Pattern that is asked: {pattern}")
             answer = knowledge_network.askPatternAtKnowledgeNetwork(requester_id, pattern, [{}], gaps_enabled)
             logger.info(f'Received answer from the knowledge network: {answer}')
             # extend the graph with the triples and values in the bindings
             graph = buildGraphFromTriplesAndBindings(graph, pattern, answer["bindingSet"])
+            logger.info(f"Knowledge network successfully responded to an optional graph pattern!")
     except Exception as e:
         raise Exception(f"An error occurred when contacting the knowledge network: {e}")
 
     # third, check if there sub-decompositions and loop over them to extend the graph and optionally knowledge gaps
     try:
         if len(decomposition.subDecompositions) > 0:
-            logger.info(f"Sub decompositions are being handled!")
             for decomp in decomposition.subDecompositions:
+                logger.info(f"A sub decomposition is being handled!")
                 graph, knowledge_gaps = buildGraphFromDecomposition(graph, decomp, requester_id, gaps_enabled, knowledge_gaps)
-        else:
-            logger.info(f"No sub decompositions to be handled!")
+                logger.info(f"The sub decomposition has successfully been handled!")
     except Exception as e:
-        logger.info(f"Something went wrong when dealing with sub decompositions!")
         raise Exception(f"An error occurred when contacting the knowledge network: {e}")
 
     return graph, knowledge_gaps
@@ -301,12 +298,20 @@ def decomposeRequest(algebra: dict, decomposition: RequestDecomposition) -> Requ
             logger.debug(f"Value clause after transforming to JSON is: {values_clause}")
             decomposition.values.append(values_clause)
         case "Filter":
-            if not str(algebra['expr']).startswith("Builtin"):
-                # it is a filter with a value for a variable, so this does not contain triples to be added to the graph pattern
-                decomposition = decomposeRequest(algebra['p'], decomposition)
-            else:
-                # it is either a filter_exists or a filter_not_exists
-                raise Exception(f"Unsupported construct type {str(algebra['expr']).split('{')[0]} in construct type {type}. Please contact the endpoint administrator to implement this!")
+            filter_type = algebra['expr'].name
+            logger.debug(f"Filter expression is {filter_type}")
+            match filter_type:
+                case "RelationalExpression":
+                    # it is a filter that checks a relation between a variable and a value => this can be ignored, continue with the rest
+                    decomposition = decomposeRequest(algebra['p'], decomposition)
+                case "ConditionalAndExpression":
+                    # it is a filter that checks multiple conditions in an AND setting => this can be ignored, continue with the rest
+                    decomposition = decomposeRequest(algebra['p'], decomposition)
+                case "Builtin_isBLANK":
+                    # it is a filter that checks whether the argument is a blank node => this can be ignored, continue with the rest
+                    decomposition = decomposeRequest(algebra['p'], decomposition)
+                case _:
+                    raise Exception(f"Unsupported construct type {filter_type}. Please contact the endpoint administrator to implement this!")
         case "Union":
             # two new sub decompositions should be derived
             decomposition.subDecompositions.append(decomposeRequest(algebra['p1'], RequestDecomposition()))
@@ -320,6 +325,15 @@ def decomposeRequest(algebra: dict, decomposition: RequestDecomposition) -> Requ
             decomposition = decomposeRequest(algebra['p1'], decomposition)
             # part p2 is an optional part which is BGP and its triples should be added as optional graph pattern
             decomposition.optionalPatterns.append(algebra['p2']['triples']) 
+        case "Distinct":
+            # the distinct contains a part p that should be further processed
+            decomposition = decomposeRequest(algebra['p'], decomposition)
+        case "Project":
+            # the project contains a part p that should be further processed
+            decomposition = decomposeRequest(algebra['p'], decomposition)
+        case "Slice":
+            # the slice contains a part p that should be further processed
+            decomposition = decomposeRequest(algebra['p'], decomposition)
         case "Extend":
             # the extend contains a part p that should be further processed
             decomposition = decomposeRequest(algebra['p'], decomposition)
@@ -421,7 +435,8 @@ def showRequestDecomposition(qd: RequestDecomposition, nm: NamespaceManager):
             bound_triple += element.n3(namespace_manager = nm) + " "
         bound_triple += "\n"
         pattern += bound_triple
-    logger.info(f"Derived the following main graph pattern from the request:\n{pattern}")
+    if pattern != "":
+        logger.info(f"Derived the following main graph pattern from the request:\n{pattern}")
 		
     for p in qd.optionalPatterns:
         pattern = ""
@@ -456,7 +471,8 @@ def showRequestDecomposition(qd: RequestDecomposition, nm: NamespaceManager):
             bound_triple += element.n3(namespace_manager = nm) + " "
         bound_triple += "\n"
         pattern += bound_triple
-    logger.info(f"Derived the following insert pattern from the request:\n{pattern}")
+    if pattern != "":
+        logger.info(f"Derived the following insert pattern from the request:\n{pattern}")
 
     for decomp in qd.subDecompositions:
         showRequestDecomposition(decomp,nm)
