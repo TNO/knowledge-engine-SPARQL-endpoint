@@ -222,17 +222,32 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     assert value.startswith("http://example.org/BiggestClimateStrikes")
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
+    # check query with UNION that should give correct results
+    query = """PREFIX ex: <http://example.org/>
+               SELECT * WHERE {
+                { ?event ex:hasNumberOfPeople ?people . }
+               UNION
+                { ?event ex:mainPersonsInvolved ?person . }
+            }"""
+    params = {"query": query}
+    response = client.get("/query/", params=params, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/IntroductionOfTheEuro")
+    logger.info("\n")
 
-    # check query with DISTINCT that is not yet allowed
+    # check query with DISTINCT that should give correct results
     query = """PREFIX ex: <http://example.org/>
                SELECT DISTINCT ?datetime WHERE {
                 ?event ex:hasOccurredAt ?datetime .
             }"""
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["datetime"]["value"]
+    assert value == "1969-07-20T20:05:00+00:00"
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -242,22 +257,13 @@ def test_get_query_URL_encoded_as_parameter_without_token():
             } LIMIT 1"""
     params = {"query": query}
     response = client.get("/query/", params=params, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/FirstLandingOnTheMoon")
     logger.info("\n")
 
-    # check query with UNION that is not yet allowed
-    query = """PREFIX ex: <http://example.org/>
-               SELECT * WHERE {
-                { ?event ex:hasOccurredAt ?datetime . }
-               UNION
-                { ?event ex:mainPersonsInvolved ?person . }
-            }"""
-    params = {"query": query}
-    response = client.get("/query/", params=params, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
-    logger.info("\n")
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with FILTER EXISTS that should give correct results 
     query = """PREFIX ex: <http://example.org/>
@@ -464,39 +470,45 @@ def test_post_query_unencoded_in_body_without_token():
     assert value.startswith("http://example.org/BiggestClimateStrikes")
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
+    # check query with UNION that should give correct results
+    query = """PREFIX ex: <http://example.org/>
+               SELECT * WHERE {
+                { ?event ex:hasNumberOfPeople ?people . }
+               UNION
+                { ?event ex:mainPersonsInvolved ?person . }
+            }"""
+    response = client.post("/query/", data=query, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/IntroductionOfTheEuro")
+    logger.info("\n")
 
-    # check query with DISTINCT that is not yet allowed
+    # check query with DISTINCT that should give correct results
     query = """PREFIX ex: <http://example.org/>
                SELECT DISTINCT ?datetime WHERE {
                 ?event ex:hasOccurredAt ?datetime .
             }"""
     response = client.post("/query/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["datetime"]["value"]
+    assert value == "1969-07-20T20:05:00+00:00"
     logger.info("\n")
 
-    # check query with LIMIT that is not yet allowed
+    # check query with LIMIT that should give correct results
     query = """PREFIX ex: <http://example.org/>
                SELECT * WHERE {
                 ?event ex:hasOccurredAt ?datetime .
             } LIMIT 1"""
     response = client.post("/query/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/FirstLandingOnTheMoon")
     logger.info("\n")
 
-    # check query with UNION that is not yet allowed
-    query = """PREFIX ex: <http://example.org/>
-               SELECT * WHERE {
-                { ?event ex:hasOccurredAt ?datetime . }
-               UNION
-                { ?event ex:mainPersonsInvolved ?person . }
-            }"""
-    response = client.post("/query/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
-    logger.info("\n")
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with FILTER EXISTS that should give correct results 
     query = """PREFIX ex: <http://example.org/>
@@ -723,7 +735,20 @@ def test_post_query_URL_encoded_in_body_without_token():
     assert value.startswith("http://example.org/BiggestClimateStrikes")
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
+    # check query with UNION that is not yet allowed
+    query = """PREFIX ex: <http://example.org/>
+               SELECT * WHERE {
+                { ?event ex:hasNumberOfPeople ?people . }
+               UNION
+                { ?event ex:mainPersonsInvolved ?person . }
+            }"""
+    payload = f"query={quote(query, safe='')}"
+    response = client.post("/query/", data=payload, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/IntroductionOfTheEuro")
+    logger.info("\n")
 
     # check query with DISTINCT that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
@@ -732,8 +757,10 @@ def test_post_query_URL_encoded_in_body_without_token():
             }"""
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["datetime"]["value"]
+    assert value == "1969-07-20T20:05:00+00:00"
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -743,22 +770,13 @@ def test_post_query_URL_encoded_in_body_without_token():
             } LIMIT 1"""
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/FirstLandingOnTheMoon")
     logger.info("\n")
 
-    # check query with UNION that is not yet allowed
-    query = """PREFIX ex: <http://example.org/>
-               SELECT * WHERE {
-                { ?event ex:hasOccurredAt ?datetime . }
-               UNION
-                { ?event ex:mainPersonsInvolved ?person . }
-            }"""
-    payload = f"query={quote(query, safe='')}"
-    response = client.post("/query/", data=payload, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
-    logger.info("\n")
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with FILTER EXISTS that should give correct results 
     query = """PREFIX ex: <http://example.org/>
@@ -785,8 +803,6 @@ def test_post_query_URL_encoded_in_body_without_token():
     logger.info("\n")
 
     logger.info("Query test successful!\n")
-
-    
 
 
 # Test of post query with gaps unencoded in body without token
@@ -963,7 +979,19 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     assert value == "?event <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/MainHistoricEvent>"
     logger.info("\n")
 
-    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
+    # check query with UNION that is not yet allowed
+    query = """PREFIX ex: <http://example.org/>
+               SELECT * WHERE {
+                { ?event ex:hasNumberOfPeople ?people . }
+               UNION
+                { ?event ex:mainPersonsInvolved ?person . }
+            }"""
+    response = client.post("/query-with-gaps/", data=query, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/IntroductionOfTheEuro")
+    logger.info("\n")
 
     # check query with DISTINCT that is not yet allowed
     query = """PREFIX ex: <http://example.org/>
@@ -971,8 +999,10 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
                 ?event ex:hasOccurredAt ?datetime .
             }"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["datetime"]["value"]
+    assert value == "1969-07-20T20:05:00+00:00"
     logger.info("\n")
 
     # check query with LIMIT that is not yet allowed
@@ -981,21 +1011,13 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
                 ?event ex:hasOccurredAt ?datetime .
             } LIMIT 1"""
     response = client.post("/query-with-gaps/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
+    assert response.status_code == 200
+    content = response.json()
+    value = content["results"]["bindings"][0]["event"]["value"]
+    assert value.startswith("http://example.org/FirstLandingOnTheMoon")
     logger.info("\n")
 
-    # check query with UNION that is not yet allowed
-    query = """PREFIX ex: <http://example.org/>
-               SELECT * WHERE {
-                { ?event ex:hasOccurredAt ?datetime . }
-               UNION
-                { ?event ex:mainPersonsInvolved ?person . }
-            }"""
-    response = client.post("/query-with-gaps/", data=query, headers=headers)
-    assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Could not decompose query to get graph patterns, Unsupported construct type")
-    logger.info("\n")
+    ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE NOT YET SUPPORTED
 
     # check query with FILTER EXISTS that should give correct results 
     query = """PREFIX ex: <http://example.org/>
