@@ -432,12 +432,18 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
                             detail=f"Unauthorized: {e}")
     logger.info(f"Received {request.method} request from '{requester_id}' via route /{route}/!")
 
+
+
+
     # then, do "content negotiation" only for the 'query' route, by checking the accept header provided by the client
     if route.startswith('query') and 'accept' in request.headers.keys() and request.headers['accept'] != "application/json":
         logger.debug(f"Accept header is: {request.headers['accept']}")
         logger.debug("Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
         raise HTTPException(status_code=412,
                             detail="When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
+
+
+
 
     # then, deal with the various GET and POST operations
     if request.method == "GET":
