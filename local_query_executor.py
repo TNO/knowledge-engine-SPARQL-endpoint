@@ -40,11 +40,12 @@ def reformatResultIntoSPARQLJson(result:dict) -> dict:
             b = {}
             for key in binding:
                 if isinstance(binding[key],rdflib.term.Literal):
-                    b[str(key)] = {"type": "literal", "datatype": str(binding[key].datatype), "value": str(binding[key])}
                     if binding[key].datatype == None:
-                        b[str(key)]["datatype"] = "http://www.w3.org/2001/XMLSchema#string"
+                        b[str(key)] = {"type": "literal", "value": str(binding[key])}
+                    else:
+                        b[str(key)] = {"type": "typed-literal", "datatype": str(binding[key].datatype), "value": str(binding[key])}
                 if isinstance(binding[key],rdflib.term.URIRef):
-                    b[str(key)] = {"type": "uri", "value": str(binding[key])}                
+                    b[str(key)] = {"type": "uri", "value": str(binding[key])}
             bindings.append(b)
         json_result["results"] = {"bindings": bindings}
 

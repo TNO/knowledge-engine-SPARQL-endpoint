@@ -8,7 +8,6 @@ import logging_config as lc
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
-from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 import urllib
@@ -207,7 +206,7 @@ class Vars(BaseModel):
 class RDFTerm(BaseModel):
     type: str
     value: str
-    datatype: str | None = None
+    model_config = ConfigDict(extra='allow')
     
 class QuerySolution(BaseModel):
     __pydantic_extra__: dict[str, RDFTerm] = Field(init=False)  
