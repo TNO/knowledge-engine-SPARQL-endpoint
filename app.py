@@ -8,7 +8,6 @@ import logging_config as lc
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
-from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 import urllib
@@ -207,7 +206,7 @@ class Vars(BaseModel):
 class RDFTerm(BaseModel):
     type: str
     value: str
-    datatype: str | None = None
+    model_config = ConfigDict(extra='allow')
     
 class QuerySolution(BaseModel):
     __pydantic_extra__: dict[str, RDFTerm] = Field(init=False)  
@@ -433,11 +432,13 @@ def process_request_message_and_get_request_and_query(request: Request, query: s
     logger.info(f"Received {request.method} request from '{requester_id}' via route /{route}/!")
 
     # then, do "content negotiation" only for the 'query' route, by checking the accept header provided by the client
-    if route.startswith('query') and 'accept' in request.headers.keys() and request.headers['accept'] != "application/json":
-        logger.debug(f"Accept header is: {request.headers['accept']}")
-        logger.debug("Precondition Failed: When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
-        raise HTTPException(status_code=412,
-                            detail="When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!")
+    if route.startswith('query') and 'accept' in request.headers.keys():
+        accept_header = request.headers.get('Accept')
+        if "application/json" not in accept_header and "application/sparql-results+json" not in accept_header:
+            logger.debug(f"Accept header is: {accept_header}")
+            logger.debug("Precondition Failed: When you provide the 'Accept' header, it should contain 'application/json' or 'application/sparql-results+json' as the endpoint only returns JSON output!")
+            raise HTTPException(status_code=412,
+                                detail="When you provide the 'Accept' header, it should contain 'application/json' or 'application/sparql-results+json' as the endpoint only returns JSON output!")
 
     # then, deal with the various GET and POST operations
     if request.method == "GET":
