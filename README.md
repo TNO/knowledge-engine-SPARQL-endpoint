@@ -2,20 +2,23 @@
 
 The Knowledge Engine SPARQL Endpoint provides an endpoint that allows SPARQL1.1 compliant requests to be fired on a knowledge network formed by the [Knowledge Engine](https://github.com/TNO/knowledge-engine). The endpoint supports both SPARQL queries as defined by the [SPARQL1.1 Query specification](https://www.w3.org/TR/2013/REC-sparql11-query-20130321/) and SPARQL update requests as defined by the [SPARQL 1.1 Update specification](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/). In addition, the endpoint also provides augmented SPARQL 1.1 query operations that return knowledge gaps in case the query cannot be answered by the knowledge network. See section 'Endpoint routes specification'.
 
-## Supported SPARQL queries
+## Supported SPARQL SELECT and ASK queries
 
-To accept SPARQL queries, the endpoint provides the GET and the two POST query operations as defined by the [SPARQL 1.1 Protocol query operation specification](https://www.w3.org/TR/sparql11-protocol#query-operation). In the current version, only SPARQL SELECT queries are supported.
+To accept SPARQL queries, the endpoint provides the GET and the two POST query operations as defined by the [SPARQL 1.1 Protocol query operation specification](https://www.w3.org/TR/sparql11-protocol#query-operation). In the current version, only SPARQL SELECT and ASK queries are supported.
 
-The WHERE clause can contain the following constructs:
+The WHERE clause of the SELECT query and the pattern in the ASK query can contain the following constructs:
 - Basic Graph Pattern,
 - FILTER
 - OPTIONAL
+- UNION
 - BIND
 - VALUES
 
 The SELECT clause can contain the following:
+- DISTINCT
 - SPARQL aggregate functions COUNT, SUM, MIN, MAX, AVG, GROUP_CONCAT, and SAMPLE
 - GROUP BY clause after the where clause
+- LIMIT clause after the where clause
 
 Other constructs will be handled in future versions of the endpoint.
 
@@ -233,7 +236,7 @@ curl -X 'POST' \
 
 #### Query results
 
-In both POST query routes, the result of the query will be returned as a SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/). For instance, the result for a single binding for the query above looks like:
+In both GET and POST query routes, the result of the query will be returned as a SPARQL1.1 Query Results JSON Format as defined in [https://www.w3.org/TR/sparql11-results-json/](https://www.w3.org/TR/sparql11-results-json/). The serialization of RDF terms in JSON follows this [specification](https://www.w3.org/TR/rdf-sparql-json-res#:~:text=3.a-,Variable,-Binding%20Results). For instance, the result for a single binding for the query above includes a `typed-literal` and looks like:
 
 	{
 	    "head": {
@@ -247,7 +250,7 @@ In both POST query routes, the result of the query will be returned as a SPARQL1
 	                    "value": "http://example.org/FirstLandingOnTheMoon"
 	                },
 	                "datetime": {
-	                    "type": "literal",
+	                    "type": "typed-literal",
 	                    "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
 	                    "value": "1969-07-20T20:05:00Z"
 	                }

@@ -7,6 +7,7 @@ import logging_config as lc
 import rdflib
 from rdflib.util import from_n3
 from rdflib import RDF, Graph, Namespace, URIRef, Literal
+from rdflib.plugins.sparql.parser import parseQuery
 
 # enable logging
 logger = logging.getLogger(__name__)
@@ -19,11 +20,25 @@ logger.setLevel(lc.LOG_LEVEL)
 
 def executeQuery(graph: Graph, query: str) -> dict:
     # run the original query on the graph to get the results
-    result = graph.query(query)
-    logger.debug(f'Result of the query when executed on the local graph {result.bindings}')
-    logger.debug(f'Variables used in the result of the query {result.vars}')
-    # reformat the result into a SPARQL 1.1 JSON result structure
-    json_result = reformatResultIntoSPARQLJson(result) 
+    logger.debug(f"Query to be executed on local graph is: {query}")
+    parsed_query = parseQuery(query)
+    
+    if parsed_query[1].name == "SelectQuery":
+        result = graph.query(query)
+        # the result object should contain bindings and vars
+        logger.debug(f'Result of the SELECT query when executed on the local graph is: {result.bindings}')
+        # reformat the result into a SPARQL 1.1 JSON result structure
+        json_result = reformatResultIntoSPARQLJson(result) 
+
+    if parsed_query[1].name == "AskQuery":
+        result = graph.query(query)
+        # the result object should contain an askAnswer field
+        logger.debug(f"Result of the ASK query when executed on the local graph is: {result.askAnswer}")
+        json_result = {
+            "head" : {},
+            "boolean": result.askAnswer
+        }
+    
     return json_result
 
 def reformatResultIntoSPARQLJson(result:dict) -> dict:

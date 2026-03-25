@@ -66,13 +66,13 @@ def constructGraphFromKnowledgeNetwork(query: str, requester_id: str, gaps_enabl
     except Exception as e:
         # create a message that says that only SELECT queries are expected and raise that exception
         replaceable_string = "Expected {SelectQuery | ConstructQuery | DescribeQuery | AskQuery}"
-        message = str(e).replace(replaceable_string,"Expected SelectQuery")
+        message = str(e).replace(replaceable_string,"Expected SelectQuery or AskQuery")
         raise Exception(message)
     
     logger.info(f"Parsed query is: {parsed_query}")
     # then determine whether the query is a SELECT query, because we only accept those!
-    if not parsed_query[1].name == "SelectQuery":
-        raise Exception(f"Only SELECT queries are supported!")
+    if not parsed_query[1].name == "SelectQuery" and not parsed_query[1].name == "AskQuery":
+        raise Exception(f"Only SELECT or ASK queries are supported!")
     
     # now, create a prologue that contains the namespaces used in the query
     prologue_new = PrologueNew()

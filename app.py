@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
+from typing import Union
 import urllib
 
 # import other py's from this repository
@@ -215,15 +216,19 @@ class QuerySolution(BaseModel):
 class Bindings(BaseModel):
     bindings: list[QuerySolution]
         
-class SPARQLResultResponse(BaseModel):
+class SPARQLSelectResponse(BaseModel):
     head: Vars
     results: Bindings
+    
+class SPARQLAskResponse(BaseModel):
+    head: dict
+    boolean: bool
     
 class Gaps(BaseModel):
     pattern: str
     gaps: list[list[str]]
 
-class SPARQLResultWithGapsResponse(BaseModel):
+class SPARQLSelectWithGapsResponse(BaseModel):
     head: Vars
     results: Bindings
     knowledge_gaps: list[Gaps]
@@ -289,6 +294,7 @@ async def root():
 # see the docs for examples how to use this route
 @app.get('/query/',
          tags=["SPARQL query execution"], 
+         response_model=Union[SPARQLSelectResponse,SPARQLAskResponse],
          description="""
              This GET operation implements the GET query operation defined by the [SPARQL 1.1 Protocol](https://www.w3.org/TR/sparql11-protocol/#query-operation):
              <br><br>
@@ -302,7 +308,7 @@ async def root():
         """,
         openapi_extra = OPENAPI_EXTRA_GET_REQUEST
         )
-async def get(request: Request) -> SPARQLResultResponse:
+async def get(request: Request):
     # get the body from the request, which should be empty
     body = await request.body()
     body = body.decode()
@@ -342,7 +348,7 @@ async def get(request: Request) -> SPARQLResultResponse:
           """,
           openapi_extra = OPENAPI_EXTRA_POST_REQUEST
         )
-async def post(request: Request) -> SPARQLResultResponse:
+async def post(request: Request) -> SPARQLSelectResponse:
     # get byte query out of request with await
     query = await request.body()
     
@@ -375,7 +381,7 @@ async def post(request: Request) -> SPARQLResultResponse:
           """,
           openapi_extra = OPENAPI_EXTRA_POST_REQUEST_FOR_GAPS
         )
-async def post(request: Request) -> SPARQLResultWithGapsResponse:
+async def post(request: Request) -> SPARQLSelectWithGapsResponse:
     # get byte query out of request with await
     query = await request.body()
     # then get the requester_id and query string
@@ -409,8 +415,6 @@ async def post(request: Request):
     requester_id, update = process_request_message_and_get_request_and_query(request, update)
 
     return handle_update(requester_id, update, False)
-
-
 
 
 ####################
@@ -545,9 +549,9 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
     try:
         result = local_query_executor.executeQuery(graph, query)
         if gaps_enabled:
-            result['knowledge_gaps'] = knowledge_gaps
-            if knowledge_gaps: #bindings should be empty
-                result['results']['bindings'] = [{}]
+             result['knowledge_gaps'] = knowledge_gaps
+             if knowledge_gaps: #bindings should be empty
+                    result['results']['bindings'] = [{}]
     except Exception as e:
         logger.debug(f"Query could not be executed on the local graph: {e}")
         raise HTTPException(status_code=500,

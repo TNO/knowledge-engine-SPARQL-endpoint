@@ -58,7 +58,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     headers = {"Accept": "application/javascript"}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 412
-    assert response.json()['detail'] == "When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!"
+    assert response.json()['detail'] == "When you provide the 'Accept' header, it should contain 'application/json' or 'application/sparql-results+json' as the endpoint only returns JSON output!"
     logger.info("\n")
 
     # check exception of the Content-Type header
@@ -76,7 +76,7 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     headers = {"Accept": "application/json"}
     response = client.get("/query/", params=params, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT queries are supported!")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT or ASK queries are supported!")
     logger.info("\n")
 
     # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
@@ -303,7 +303,7 @@ def test_post_query_unencoded_in_body_without_token():
     headers = {"Accept": "application/javascript"}
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 412
-    assert response.json()['detail'] == "When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!"
+    assert response.json()['detail'] == "When you provide the 'Accept' header, it should contain 'application/json' or 'application/sparql-results+json' as the endpoint only returns JSON output!"
     logger.info("\n")
 
     # check exception of the presence of a Content-Type header
@@ -331,7 +331,7 @@ def test_post_query_unencoded_in_body_without_token():
     query = "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }"
     response = client.post("/query/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT queries are supported!")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT or ASK queries are supported!")
     logger.info("\n")
 
     # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
@@ -547,7 +547,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     headers = {"Accept": "application/javascript"}
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 412
-    assert response.json()['detail'] == "When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!"
+    assert response.json()['detail'] == "When you provide the 'Accept' header, it should contain 'application/json' or 'application/sparql-results+json' as the endpoint only returns JSON output!"
     logger.info("\n")
 
     # check exception of the presence of a Content-Type header
@@ -590,7 +590,7 @@ def test_post_query_URL_encoded_in_body_without_token():
     payload = f"query={quote(query, safe='')}"
     response = client.post("/query/", data=payload, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT queries are supported!")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT or ASK queries are supported!")
     logger.info("\n")
 
     # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
@@ -816,7 +816,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     headers = {"Accept": "application/javascript"}
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 412
-    assert response.json()['detail'] == "When you provide the 'Accept' header, it should be set to 'application/json' as the endpoint only returns JSON output!"
+    assert response.json()['detail'] == "When you provide the 'Accept' header, it should contain 'application/json' or 'application/sparql-results+json' as the endpoint only returns JSON output!"
     logger.info("\n")
 
     # check exception of the presence of a Content-Type header
@@ -844,7 +844,7 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     query = "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }"
     response = client.post("/query-with-gaps/", data=query, headers=headers)
     assert response.status_code == 400
-    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT queries are supported!")
+    assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT or ASK queries are supported!")
     logger.info("\n")
 
     # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
