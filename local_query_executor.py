@@ -20,20 +20,20 @@ logger.setLevel(lc.LOG_LEVEL)
 
 def executeQuery(graph: Graph, query: str) -> dict:
     # run the original query on the graph to get the results
-    logger.info(f"Query to be executed on local graph is: {query}")
+    logger.debug(f"Query to be executed on local graph is: {query}")
     parsed_query = parseQuery(query)
     
     if parsed_query[1].name == "SelectQuery":
         result = graph.query(query)
         # the result object should contain bindings and vars
-        logger.info(f'Result of the SELECT query when executed on the local graph is: {result.bindings}')
+        logger.debug(f'Result of the SELECT query when executed on the local graph is: {result.bindings}')
         # reformat the result into a SPARQL 1.1 JSON result structure
         json_result = reformatResultIntoSPARQLJson(result) 
 
     if parsed_query[1].name == "AskQuery":
         result = graph.query(query)
         # the result object should contain an askAnswer field
-        logger.info(f"Result of the ASK query when executed on the local graph is: {result.askAnswer}")
+        logger.debug(f"Result of the ASK query when executed on the local graph is: {result.askAnswer}")
         json_result = {
             "head" : {},
             "boolean": result.askAnswer
