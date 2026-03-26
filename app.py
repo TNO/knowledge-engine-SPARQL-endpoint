@@ -333,6 +333,7 @@ async def get(request: Request):
 # see the docs for examples how to use this route
 @app.post('/query/',
           tags=["SPARQL query execution"], 
+          response_model=Union[SPARQLSelectResponse,SPARQLAskResponse],
           description="""
               This POST operation implements the 2 POST query operations defined by the [SPARQL 1.1 Protocol](https://www.w3.org/TR/sparql11-protocol/#query-operation):
               <br><br>
@@ -348,7 +349,7 @@ async def get(request: Request):
           """,
           openapi_extra = OPENAPI_EXTRA_POST_REQUEST
         )
-async def post(request: Request) -> SPARQLSelectResponse:
+async def post(request: Request):
     # get byte query out of request with await
     query = await request.body()
     
@@ -361,6 +362,7 @@ async def post(request: Request) -> SPARQLSelectResponse:
 # see the docs for examples how to use this route
 @app.post('/query-with-gaps/',
           tags=["SPARQL query execution with possible gaps"], 
+          response_model=Union[SPARQLSelectWithGapsResponse,SPARQLAskResponse],
           description="""
               This POST operation implements the 2 POST query operations defined by the [SPARQL 1.1 Protocol](https://www.w3.org/TR/sparql11-protocol/#query-operation):
               <br><br>
@@ -381,7 +383,7 @@ async def post(request: Request) -> SPARQLSelectResponse:
           """,
           openapi_extra = OPENAPI_EXTRA_POST_REQUEST_FOR_GAPS
         )
-async def post(request: Request) -> SPARQLSelectWithGapsResponse:
+async def post(request: Request):
     # get byte query out of request with await
     query = await request.body()
     # then get the requester_id and query string
@@ -548,10 +550,11 @@ def handle_query(requester_id: str, query: str, gaps_enabled) -> dict:
     # execute the query on the graph with the retrieved bindings
     try:
         result = local_query_executor.executeQuery(graph, query)
-        if gaps_enabled:
-             result['knowledge_gaps'] = knowledge_gaps
-             if knowledge_gaps: #bindings should be empty
-                    result['results']['bindings'] = [{}]
+        # add knowledge gaps when enabled for a SELECT query
+        if gaps_enabled and 'results' in result.keys():
+            result['knowledge_gaps'] = knowledge_gaps
+            if knowledge_gaps: #bindings should be empty
+                result['results']['bindings'] = [{}]
     except Exception as e:
         logger.debug(f"Query could not be executed on the local graph: {e}")
         raise HTTPException(status_code=500,

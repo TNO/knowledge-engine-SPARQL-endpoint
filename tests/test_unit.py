@@ -79,9 +79,31 @@ def test_get_query_URL_encoded_as_parameter_without_token():
     assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT or ASK queries are supported!")
     logger.info("\n")
 
-    # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
+    # check other non-SELECT queries that are not allowed, such as DESCRIBE
 
     ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE SUPPORTED
+
+    # check ASK query with BGP that should give result True
+    query = "ASK WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
+    params = {"query": query}
+    headers = {"Accept": "application/json"}
+    response = client.get("/query/", params=params, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    logger.info(f"ask response is: {content}")
+    assert content['boolean'] == True
+    logger.info("\n")
+
+    # check ASK query with BGP that should give result False
+    query = "ASK WHERE { ?event <http://example.org/hasProperty> ?datetime . }"
+    params = {"query": query}
+    headers = {"Accept": "application/json"}
+    response = client.get("/query/", params=params, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    logger.info(f"ask response is: {content}")
+    assert content['boolean'] == False
+    logger.info("\n")
 
     # check query with BGP that should give correct results
     query = "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
@@ -334,9 +356,27 @@ def test_post_query_unencoded_in_body_without_token():
     assert response.json()['detail'].startswith("Query could not be processed by the endpoint: Only SELECT or ASK queries are supported!")
     logger.info("\n")
 
-    # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
+    # check other non-SELECT queries that are not allowed, such as DESCRIBE
 
     ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE SUPPORTED
+
+    # check ASK query with BGP that should give result True
+    query = "ASK WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
+    headers = {"Accept": "application/json", "Content-Type": "application/sparql-query"}
+    response = client.post("/query/", data=query, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    assert content['boolean'] == True
+    logger.info("\n")
+
+    # check ASK query with BGP that should give result False
+    query = "ASK WHERE { ?event <http://example.org/hasProperty> ?datetime . }"
+    headers = {"Accept": "application/json", "Content-Type": "application/sparql-query"}
+    response = client.post("/query/", data=query, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    assert content['boolean'] == False
+    logger.info("\n")
 
     # check query with BGP that should give correct results
     query = "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
@@ -597,6 +637,24 @@ def test_post_query_URL_encoded_in_body_without_token():
 
     ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE SUPPORTED
 
+    # check ASK query with BGP that should give result True
+    query = "ASK WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
+    payload = f"query={quote(query, safe='')}"
+    response = client.post("/query/", data=payload, headers=headers)    
+    assert response.status_code == 200
+    content = response.json()
+    assert content['boolean'] == True
+    logger.info("\n")
+
+    # check ASK query with BGP that should give result False
+    query = "ASK WHERE { ?event <http://example.org/hasProperty> ?datetime . }"
+    payload = f"query={quote(query, safe='')}"
+    response = client.post("/query/", data=payload, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    assert content['boolean'] == False
+    logger.info("\n")
+
     # check query with BGP that should give correct results
     query = "SELECT * WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
     payload = f"query={quote(query, safe='')}"
@@ -850,6 +908,22 @@ def test_post_query_with_gaps_unencoded_in_body_without_token():
     # check other non-SELECT queries that are not allowed, such as ASK and DESCRIBE
 
     ### BELOW ARE QUERIES WITH CONSTRUCTS THAT ARE SUPPORTED
+
+    # check ASK query with BGP that should give result True
+    query = "ASK WHERE { ?event <http://example.org/hasOccurredAt> ?datetime . }"
+    response = client.post("/query-with-gaps/", data=query, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    assert content['boolean'] == True
+    logger.info("\n")
+
+    # check ASK query with BGP that should give result False
+    query = "ASK WHERE { ?event <http://example.org/hasProperty> ?datetime . }"
+    response = client.post("/query-with-gaps/", data=query, headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    assert content['boolean'] == False
+    logger.info("\n")
 
     # check query with BGP that should give gaps
     query = """PREFIX ex: <http://example.org/>
