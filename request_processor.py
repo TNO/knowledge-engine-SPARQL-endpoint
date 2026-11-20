@@ -307,8 +307,14 @@ def decomposeRequest(algebra: dict, decomposition: RequestDecomposition) -> Requ
                 case "ConditionalAndExpression":
                     # it is a filter that checks multiple conditions in an AND setting => this can be ignored, continue with the rest
                     decomposition = decomposeRequest(algebra['p'], decomposition)
+                case "ConditionalOrExpression":
+                    # it is a filter that checks multiple conditions in an OR setting => this can be ignored, continue with the rest
+                    decomposition = decomposeRequest(algebra['p'], decomposition)
                 case "Builtin_isBLANK":
                     # it is a filter that checks whether the argument is a blank node => this can be ignored, continue with the rest
+                    decomposition = decomposeRequest(algebra['p'], decomposition)
+                case "UnaryNot":
+                    # it is a filter that uses the not (!) operator => this can be ignored, continue with the rest
                     decomposition = decomposeRequest(algebra['p'], decomposition)
                 case _:
                     raise Exception(f"Unsupported construct type {filter_type}. Please contact the endpoint administrator to implement this!")
